@@ -8,13 +8,13 @@ OBJDIR = obj
 _DEPS = main.h
 DEPS = $(patsubst %,$(INCLDIR)/%,$(_DEPS))
 
-_OBJS = main.o
+_OBJS = main.o linked_list.o
 OBJS = $(patsubst %,$(OBJDIR)/%,$(_OBJS))
 
 $(OBJDIR)/%.o: %.c $(DEPS)
 	$(CC) -c -o $@ $< $(CFLAGS)
 
-oppgave2: $(OBJS)
+oppgave3: $(OBJS)
 	gcc -o $@ $^ $(CFLAGS)
 
 debug: $(OBJS)

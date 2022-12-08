@@ -11,8 +11,8 @@ typedef unsigned char BYTE;
 #pragma pack(1)
 
 typedef struct _NODE {
-    struct _LIST *pNext;
-    struct _LIST *pPrev;
+    struct _NODE *pNext;
+    struct _NODE *pPrev;
     int iSize;
     int iDate;
     int numberOfDays;
@@ -25,9 +25,11 @@ typedef struct _NODE {
 
 #pragma pack(1)
 typedef struct _LIST {
-    struct NODE *pHead;
-    struct NODE *pTail;
+    NODE *pHead;
+    NODE *pTail;
 } LIST;
 #pragma pack()
 
+NODE *CreateNode (char *szName, char *szRoom, int iDate, int iDays, float fPrice);
+int AddToList (LIST *pList, NODE *pNode);
 #endif //C_EKSAMEN_LINKED_LIST_H
