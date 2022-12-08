@@ -2,10 +2,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include "./include/linked_list.h"
-
+#include <time.h>
 
 // Creates and allocates space for a new node + its content, then returns its pointer
-NODE *CreateNode (char *szName, char *szRoom, int iDate, int iDays, float fPrice)
+NODE *CreateNode (char *szName, char *szRoom, unsigned int iDate, int iDays, float fPrice)
 {
     int iListSize = sizeof(NODE)
             + (strlen(szName) + 1)
@@ -21,7 +21,7 @@ NODE *CreateNode (char *szName, char *szRoom, int iDate, int iDays, float fPrice
 
         pThis->iSize = iListSize;
         pThis->fPrice = fPrice;
-        pThis->iDate = iDate;
+        pThis->iDate = (time_t) iDate;
         pThis->numberOfDays = iDays;
         pThis->szName = (char *) malloc(strlen(szName) + 1);
         pThis->szRoomNumber = (char *) malloc(strlen(szRoom) + 1);
@@ -30,6 +30,28 @@ NODE *CreateNode (char *szName, char *szRoom, int iDate, int iDays, float fPrice
     }
     return pThis;
 }
+
+int RemoveOldElements (LIST *pList, unsigned int iDate) {
+    // get current time
+    time_t currentTime = time(NULL);
+    // Remove all elements that are older than currentTime + 24 hours * seconds * numberOfDays
+    NODE *pCurrentNode = pList->pHead;
+    while (pCurrentNode != NULL) {
+        if (pCurrentNode->iDate < currentTime + (24 * 60 * 60 * pCurrentNode->numberOfDays)) {
+            if(pCurrentNode->pPrev != NULL) {
+                pCurrentNode->pPrev->pNext = pCurrentNode->pNext;
+            }
+            if(pCurrentNode->pNext != NULL) {
+                pCurrentNode->pNext->pPrev = pCurrentNode->pPrev;
+            }
+            free(pCurrentNode);
+            break;
+        }
+        pCurrentNode = pCurrentNode->pNext;
+    }
+    return OK;
+}
+
 int RemoveLastElement (LIST *pList) {
 
     // There is no elements in the list, so just return 0

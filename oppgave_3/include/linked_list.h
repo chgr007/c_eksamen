@@ -14,7 +14,7 @@ typedef struct _NODE {
     struct _NODE *pNext;
     struct _NODE *pPrev;
     int iSize;
-    int iDate;
+    unsigned int iDate;
     int numberOfDays;
     float fPrice;
     char *szName;
@@ -30,7 +30,8 @@ typedef struct _LIST {
 } LIST;
 #pragma pack()
 
-NODE *CreateNode (char *szName, char *szRoom, int iDate, int iDays, float fPrice);
+NODE *CreateNode (char *szName, char *szRoom, unsigned int iDate, int iDays, float fPrice);
 int AddToList (LIST *pList, NODE *pNode);
 int RemoveLastElement (LIST *pList);
+int RemoveOldElements (LIST *pList, unsigned int iDate);
 #endif //C_EKSAMEN_LINKED_LIST_H
