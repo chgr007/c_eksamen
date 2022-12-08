@@ -30,6 +30,30 @@ NODE *CreateNode (char *szName, char *szRoom, int iDate, int iDays, float fPrice
     }
     return pThis;
 }
+int RemoveLastElement (LIST *pList) {
+
+    // There is no elements in the list, so just return 0
+    if (pList->pHead == NULL) {
+        return ERROR;
+    }
+
+    // There is only one element int the list. Free it from memory and set the head and tail to NULL
+    if (pList->pHead == pList->pTail) {
+        free(pList->pHead);
+        pList->pHead = NULL;
+        pList->pTail = NULL;
+        return OK;
+    }
+
+    NODE *pCurrentNode = pList->pHead;
+    while (pCurrentNode->pNext != pList->pTail) {
+        pCurrentNode = pCurrentNode->pNext;
+    }
+    free(pList->pTail);
+    pList->pTail = pCurrentNode;
+    pList->pTail->pNext = NULL;
+    return OK;
+}
 
 int AddToList (LIST *pList, NODE *pNode)
 {

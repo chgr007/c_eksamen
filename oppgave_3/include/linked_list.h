@@ -32,4 +32,5 @@ typedef struct _LIST {
 
 NODE *CreateNode (char *szName, char *szRoom, int iDate, int iDays, float fPrice);
 int AddToList (LIST *pList, NODE *pNode);
+int RemoveLastElement (LIST *pList);
 #endif //C_EKSAMEN_LINKED_LIST_H
