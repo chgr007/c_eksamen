@@ -5,6 +5,10 @@
 #define OUTPUT_FILE "./text_to_write.out.txt"
 
 // Kode hentet fra min egen oppg. 6
+
+// TODO:
+//  - Sjekke for memory leaks
+//  - Flytte ting i metoder
 int main() {
     long lFileBytes;
     char *sFileContent;
@@ -31,20 +35,30 @@ int main() {
     puts("\n");
 
     int i;
+    // Allocate twice the size of the file content, since we're converting it to hex
     char *szAsciiFormatedText = (char *) malloc((lFileBytes * sizeof(char *) * 2));
     bzero(szAsciiFormatedText, (lFileBytes * sizeof(char *) * 2));
 
+    // Loop through the file content and convert it to hex
     for (i = 0; i < strlen(sFileContent) - 1; i++) {
-
         int iCurrentChar = *(sFileContent + i);
         char *szHexValue = (char *) malloc(2 * sizeof(char));
-
         sprintf(szHexValue, "%X", iCurrentChar);
-
         printf("%c, %d, 0x%X", iCurrentChar, (char) *(sFileContent + i), iCurrentChar);
         strncat(szAsciiFormatedText, szHexValue, 2);
         puts("\n");
     }
     printf("Hex text: %s", szAsciiFormatedText);
+
+    // Write the hex text to a file
+    FILE *fdOutputFile = fopen(OUTPUT_FILE, "w");
+    if (fdOutputFile == NULL) {
+        printf("Error opening file");
+        return 1;
+    }
+    fwrite(szAsciiFormatedText, sizeof(char), strlen(szAsciiFormatedText), fdOutputFile);
+    fclose(fdOutputFile);
+
+    free(szAsciiFormatedText);
     return 0;
 }
