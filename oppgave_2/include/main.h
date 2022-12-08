@@ -1,0 +1,4 @@
+#ifndef C_EKSAMEN_MAIN_H
+#define C_EKSAMEN_MAIN_H
+
+#endif //C_EKSAMEN_MAIN_H
