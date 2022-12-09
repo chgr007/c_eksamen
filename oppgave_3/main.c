@@ -25,6 +25,8 @@ int main() {
         printf("Name: %s", pList->pHead->szName);
         pCurrentNode = pCurrentNode->pNext;
     }
+    RemoveLastElement(pList);
+
     return 0;
 }
 
