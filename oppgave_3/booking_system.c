@@ -46,6 +46,8 @@ BOOKING *CreateBooking (char *szName, char *szRoom, unsigned int iDate, int iDay
     return pBooking;
 }
 
+
+// Er noe feil her.
 int RemoveNodeFromList(LIST *pList, NODE *pNode) {
     // Check if element is first or last in the list before deleting
     if (pNode->pPrev == NULL) {
@@ -69,18 +71,21 @@ int RemoveOldBookings(LIST *pList) {
     NODE *pCurrentNode = pList->pHead;
     while (pCurrentNode != NULL) {
         BOOKING *pBooking = (BOOKING *) pCurrentNode->pData;
-        printf("booking time: %d, current time: %d\n", pBooking->iDate, time(NULL));
+        int iSecondsWhenBookingEnds = pBooking->iDate + (pBooking->numberOfDays * 24 * 60 * 60);
 
-        if (pBooking->iDate + (pBooking->numberOfDays * 24 * 60 * 60) < (unsigned int) time(NULL)) {
+        if (iSecondsWhenBookingEnds< time(NULL)) {
             printf("Removing");
-            RemoveNodeFromList(pList, pCurrentNode);
+            NODE *nodeToDelete = pCurrentNode->pNext;
+            pCurrentNode = nodeToDelete->pNext;
+            RemoveNodeFromList(pList, nodeToDelete);
+            continue;
         }
         pCurrentNode = pCurrentNode->pNext;
     }
     return OK;
 }
 
-
+/* Free memory in the booking struct, then the memory for the struct itself */
 static int FreeBooking (BOOKING *pBooking) {
     if (pBooking != NULL) {
         free(pBooking->szName);
