@@ -1,4 +1,5 @@
-#include "./include/linked_list.h"
+#include "include/linked_list.h"
+#include "include/booking_system.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
@@ -17,16 +18,23 @@ int main() {
 
     unsigned int time = mktime(&timeInfo);
 
-    NODE *testNode = CreateNode("Test", "123", time, 123, 123.0);
-    AddToList(pList, testNode);
-
+    BOOKING *testBooking = CreateBooking("Test", "1235", time, 123, 123.0);
+    AddBookingToList(testBooking, pList);
+    AddBookingToList(CreateBooking("Test2", "1235", time, 123, 123.0), pList);
     NODE *pCurrentNode = pList->pHead;
     while (pCurrentNode != NULL) {
-        printf("Name: %s", pList->pHead->szName);
+        BOOKING *pBooking = (BOOKING *) pCurrentNode->pData;
+        printf("Name: %s\n", pBooking->szName);
         pCurrentNode = pCurrentNode->pNext;
     }
-    RemoveLastElement(pList);
-
+    RemoveLastBooking(pList);
+    printf("After removal:\n");
+    pCurrentNode = pList->pHead;
+    while (pCurrentNode != NULL) {
+        BOOKING *pBooking = (BOOKING *) pCurrentNode->pData;
+        printf("Name: %s\n", pBooking->szName);
+        pCurrentNode = pCurrentNode->pNext;
+    }
     return 0;
 }
 
