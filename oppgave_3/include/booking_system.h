@@ -12,13 +12,17 @@ typedef struct _BOOKING {
 } BOOKING;
 #pragma pack()
 
+int RemoveOldBookings(LIST *pList);
+
+int RemoveNodeFromList(LIST *pList, NODE *pNode);
+
 int AddBookingToList(BOOKING *pBooking, LIST *pList);
+
 int RemoveLastBooking(LIST *pList);
-static int FreeBooking (BOOKING *pBooking);
-BOOKING *CreateBooking (char *szName, char *szRoom, unsigned int iDate, int iDays, float fPrice);
 
+static int FreeBooking(BOOKING *pBooking);
 
-
+BOOKING *CreateBooking(char *szName, char *szRoom, unsigned int iDate, int iDays, float fPrice);
 
 
 #endif //C_EKSAMEN_BOOKING_SYSTEM_H

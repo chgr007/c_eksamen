@@ -9,25 +9,25 @@ int main() {
     pList->pHead = NULL;
     pList->pTail = NULL;
     struct tm timeInfo = {0};
-    // Antall år siden 1900. Resten rimelig selvforklarende
+    // Antall år siden 1900. Måned fra 0-11. Resten rimelig selvforklarende
     timeInfo.tm_year = 2022 - 1900;
-    timeInfo.tm_mon = 8 - 1;
-    timeInfo.tm_mday = 12;
-    timeInfo.tm_hour = 12;
-    timeInfo.tm_min = 12;
+    timeInfo.tm_mon = 12 - 1;
+    timeInfo.tm_mday = 8;
+    timeInfo.tm_hour = 10 - 1;
+    timeInfo.tm_min = 53 - 1;
 
     unsigned int time = mktime(&timeInfo);
 
-    BOOKING *testBooking = CreateBooking("Test", "1235", time, 123, 123.0);
+    BOOKING *testBooking = CreateBooking("Test", "1235", time, 1, 123.0);
     AddBookingToList(testBooking, pList);
-    AddBookingToList(CreateBooking("Test2", "1235", time, 123, 123.0), pList);
+    AddBookingToList(CreateBooking("Test2", "1235", time - 1000, 1, 123.0), pList);
     NODE *pCurrentNode = pList->pHead;
     while (pCurrentNode != NULL) {
         BOOKING *pBooking = (BOOKING *) pCurrentNode->pData;
         printf("Name: %s\n", pBooking->szName);
         pCurrentNode = pCurrentNode->pNext;
     }
-    RemoveLastBooking(pList);
+    RemoveOldBookings(pList);
     printf("After removal:\n");
     pCurrentNode = pList->pHead;
     while (pCurrentNode != NULL) {

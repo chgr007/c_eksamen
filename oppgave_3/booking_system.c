@@ -46,6 +46,41 @@ BOOKING *CreateBooking (char *szName, char *szRoom, unsigned int iDate, int iDay
     return pBooking;
 }
 
+int RemoveNodeFromList(LIST *pList, NODE *pNode) {
+    // Check if element is first or last in the list before deleting
+    if (pNode->pPrev == NULL) {
+        pList->pHead = pNode->pNext;
+    } else {
+        pNode->pPrev->pNext = pNode->pNext;
+    }
+    if (pNode->pNext == NULL) {
+        pList->pTail = pNode->pPrev;
+    } else {
+        pNode->pNext->pPrev = pNode->pPrev;
+    }
+    // Free the node
+    FreeBooking((BOOKING *) pNode->pData);
+    free(pNode);
+    return OK;
+}
+
+// Remove bookings from list that are older or equal than iDate + the seconds in the iDays (if equal, it expires in one second..)
+int RemoveOldBookings(LIST *pList) {
+    NODE *pCurrentNode = pList->pHead;
+    while (pCurrentNode != NULL) {
+        BOOKING *pBooking = (BOOKING *) pCurrentNode->pData;
+        printf("booking time: %d, current time: %d\n", pBooking->iDate, time(NULL));
+
+        if (pBooking->iDate + (pBooking->numberOfDays * 24 * 60 * 60) < (unsigned int) time(NULL)) {
+            printf("Removing");
+            RemoveNodeFromList(pList, pCurrentNode);
+        }
+        pCurrentNode = pCurrentNode->pNext;
+    }
+    return OK;
+}
+
+
 static int FreeBooking (BOOKING *pBooking) {
     if (pBooking != NULL) {
         free(pBooking->szName);
