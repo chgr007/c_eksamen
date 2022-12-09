@@ -18,7 +18,7 @@ oppgave3: $(OBJS)
 	gcc -o $@ $^ $(CFLAGS)
 
 debug: $(OBJS)
-	gcc -o $@ $^ $(DEBUGFLAGS)
+	$(CC) -o $@ $^ $(DEBUGFLAGS)
 
 .PHONY: clean
 clean:

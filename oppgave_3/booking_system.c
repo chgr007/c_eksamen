@@ -46,6 +46,46 @@ BOOKING *CreateBooking (char *szName, char *szRoom, unsigned int iDate, int iDay
     return pBooking;
 }
 
+
+// Er noe feil her.
+int RemoveNodeFromList(LIST *pList, NODE *pNode) {
+    // Check if element is first or last in the list before deleting
+    if (pNode->pPrev == NULL) {
+        pList->pHead = pNode->pNext;
+    } else {
+        pNode->pPrev->pNext = pNode->pNext;
+    }
+    if (pNode->pNext == NULL) {
+        pList->pTail = pNode->pPrev;
+    } else {
+        pNode->pNext->pPrev = pNode->pPrev;
+    }
+    // Free the node
+    FreeBooking((BOOKING *) pNode->pData);
+    free(pNode);
+    return OK;
+}
+
+// Remove bookings from list that are older or equal than iDate + the seconds in the iDays (if equal, it expires in one second..)
+int RemoveOldBookings(LIST *pList) {
+    NODE *pCurrentNode = pList->pHead;
+    while (pCurrentNode != NULL) {
+        BOOKING *pBooking = (BOOKING *) pCurrentNode->pData;
+        int iSecondsWhenBookingEnds = pBooking->iDate + (pBooking->numberOfDays * 24 * 60 * 60);
+
+        if (iSecondsWhenBookingEnds< time(NULL)) {
+            printf("Removing");
+            NODE *nodeToDelete = pCurrentNode->pNext;
+            pCurrentNode = nodeToDelete->pNext;
+            RemoveNodeFromList(pList, nodeToDelete);
+            continue;
+        }
+        pCurrentNode = pCurrentNode->pNext;
+    }
+    return OK;
+}
+
+/* Free memory in the booking struct, then the memory for the struct itself */
 static int FreeBooking (BOOKING *pBooking) {
     if (pBooking != NULL) {
         free(pBooking->szName);
