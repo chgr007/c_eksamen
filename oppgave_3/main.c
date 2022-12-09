@@ -35,6 +35,14 @@ int main() {
         printf("Name: %s\n", pBooking->szName);
         pCurrentNode = pCurrentNode->pNext;
     }
+
+    BOOKING *pBookingByName = FindBookingByName(pList, "Testers");
+    if(pBookingByName != NULL) {
+        printf("Found booking by name: %s\n", pBookingByName->szName);
+    } else {
+        printf("Could not find booking by name\n");
+    }
+    SummerizeBookingForOneDay(pList, testBooking->iDate);
     return 0;
 }
 
