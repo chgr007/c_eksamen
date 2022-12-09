@@ -2,82 +2,39 @@
 #include <stdlib.h>
 #include <string.h>
 #include "./include/linked_list.h"
-#include <time.h>
 
-// Creates and allocates space for a new node + its content, then returns its pointer
-NODE *CreateNode (char *szName, char *szRoom, unsigned int iDate, int iDays, float fPrice)
+// Creates and allocates space for a new node + its content, then returns its pointer.
+// The node itself is made generic, so it uses the struct BYTE (int) type to hold the data. In newer versions of C we could've used a void pointer instead.
+NODE *CreateNode (BYTE *pData, int iSize)
 {
-    int iListSize = sizeof(NODE)
-            + (strlen(szName) + 1)
-            + (strlen(szRoom) + 1)
-            + (sizeof(int) * 2)
-             + sizeof (float);
-
-    NODE *pThis = malloc (iListSize);
+    NODE *pThis = malloc (sizeof (NODE));
     if (pThis != NULL) {
-        memset (pThis, 0, iListSize);
+        memset (pThis, 0, sizeof (NODE));
         pThis->pNext = NULL;
         pThis->pPrev = NULL;
-
-        pThis->iSize = iListSize;
-        pThis->fPrice = fPrice;
-        pThis->iDate = (time_t) iDate;
-        pThis->numberOfDays = iDays;
-        pThis->szName = (char *) malloc(strlen(szName) + 1);
-        pThis->szRoomNumber = (char *) malloc(strlen(szRoom) + 1);
-        memcpy (pThis->szName, szName, strlen(szName) + 1);
-        memcpy(pThis->szRoomNumber, szRoom, strlen(szRoom)+ 1);
+        pThis->pData = malloc (iSize);
+        if (pThis->pData != NULL) {
+            memcpy (pThis->pData, pData, iSize);
+        } else {
+            printf ("ERROR: Could not allocate memory for the nodes data\n");
+            free (pThis);
+            pThis = NULL;
+        }
     }
     return pThis;
 }
 
-int RemoveOldElements (LIST *pList, unsigned int iDate) {
-    // get current time
-    time_t currentTime = time(NULL);
-    // Remove all elements that are older than currentTime + 24 hours * seconds * numberOfDays
+
+NODE *GetLastElement(LIST *pList)
+{
     NODE *pCurrentNode = pList->pHead;
-    while (pCurrentNode != NULL) {
-        if (pCurrentNode->iDate < currentTime + (24 * 60 * 60 * pCurrentNode->numberOfDays)) {
-            if(pCurrentNode->pPrev != NULL) {
-                pCurrentNode->pPrev->pNext = pCurrentNode->pNext;
-            }
-            if(pCurrentNode->pNext != NULL) {
-                pCurrentNode->pNext->pPrev = pCurrentNode->pPrev;
-            }
-            free(pCurrentNode);
-            break;
-        }
+    while (pCurrentNode->pNext != NULL) {
         pCurrentNode = pCurrentNode->pNext;
     }
-    return OK;
+    return pCurrentNode;
 }
 
-int RemoveLastElement (LIST *pList) {
-
-    // There is no elements in the list, so just return 0
-    if (pList->pHead == NULL) {
-        return ERROR;
-    }
-
-    // There is only one element int the list. Free it from memory and set the head and tail to NULL
-    if (pList->pHead == pList->pTail) {
-        free(pList->pHead);
-        pList->pHead = NULL;
-        pList->pTail = NULL;
-        return OK;
-    }
-
-    NODE *pCurrentNode = pList->pHead;
-    while (pCurrentNode->pNext != pList->pTail) {
-        pCurrentNode = pCurrentNode->pNext;
-    }
-    free(pList->pTail);
-    pList->pTail = pCurrentNode;
-    pList->pTail->pNext = NULL;
-    return OK;
-}
-
-int AddToList (LIST *pList, NODE *pNode)
+int AddNodeToList (LIST *pList, NODE *pNode)
 {
     if (pList->pHead == NULL) {
         pList->pHead = pNode;

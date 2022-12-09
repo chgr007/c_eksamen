@@ -13,12 +13,7 @@ typedef unsigned char BYTE;
 typedef struct _NODE {
     struct _NODE *pNext;
     struct _NODE *pPrev;
-    int iSize;
-    unsigned int iDate;
-    int numberOfDays;
-    float fPrice;
-    char *szName;
-    char *szRoomNumber;
+    BYTE *pData;
 } NODE;
 
 #pragma pack()
@@ -30,8 +25,8 @@ typedef struct _LIST {
 } LIST;
 #pragma pack()
 
-NODE *CreateNode (char *szName, char *szRoom, unsigned int iDate, int iDays, float fPrice);
-int AddToList (LIST *pList, NODE *pNode);
+NODE *CreateNode (BYTE *pData, int iSize);
+int AddNodeToList (LIST *pList, NODE *pNode);
 int RemoveLastElement (LIST *pList);
 int RemoveOldElements (LIST *pList, unsigned int iDate);
 #endif //C_EKSAMEN_LINKED_LIST_H

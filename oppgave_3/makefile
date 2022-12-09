@@ -8,7 +8,7 @@ OBJDIR = obj
 _DEPS = main.h
 DEPS = $(patsubst %,$(INCLDIR)/%,$(_DEPS))
 
-_OBJS = main.o linked_list.o
+_OBJS = main.o linked_list.o booking_system.o
 OBJS = $(patsubst %,$(OBJDIR)/%,$(_OBJS))
 
 $(OBJDIR)/%.o: %.c $(DEPS)
