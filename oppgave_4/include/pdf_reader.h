@@ -1,5 +1,7 @@
 #ifndef C_EKSAMEN_PDF_READER_H
 #define C_EKSAMEN_PDF_READER_H
+#define ERROR 0
+#define OK 1
 
 typedef unsigned char BYTE;
 typedef struct _PDF_BYTE_BUFFER {
@@ -11,7 +13,7 @@ typedef struct _PDF_BYTE_BUFFER {
 
 } PDF_BYTE_BUFFER;
 
-int PdfReader(char *pszFileName);
+int PdfReader(char *pszFileName, PDF_BYTE_BUFFER *structPdfByteBuffer);
 int PdfAnalyzer(PDF_BYTE_BUFFER *pdfByteBuffer);
 
 #endif //C_EKSAMEN_PDF_READER_H
