@@ -14,7 +14,7 @@ int main(int iArgC, char *pszArgV[]) {
 
     pthread_t threadReader, threadAnalyzer;
 
-    if (pthread_create(&threadReader, NULL, (void *) PdfReader, pszArgV[1]) != 0) {
+    if (pthread_create(&threadReader, NULL, (BYTE*) PdfReader, pszArgV[1]) != 0) {
         printf("Error when creating thread\n");
         return 1;
     }
