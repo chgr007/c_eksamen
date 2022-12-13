@@ -2,8 +2,9 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <semaphore.h>
+#include <unistd.h>
 #include <string.h>
-#include "include/pdf_reader.h"
+#include "include/main.h"
 
 /* Entry point for a program which analyzes the byte-composition of a PDF-document.
  * The main function does some crude error checking, and then initializes the threads and semaphores.
@@ -12,36 +13,29 @@
  * */
 int main(int iArgC, char *pszArgV[]) {
     pthread_t threadReader, threadAnalyzer;
-    PDF_BYTE_BUFFER *pdfByteBuffer = (PDF_BYTE_BUFFER *) malloc(sizeof(PDF_BYTE_BUFFER));
+    PDF_BYTE_BUFFER *structPdfByteBuffer = (PDF_BYTE_BUFFER *) malloc(sizeof(PDF_BYTE_BUFFER));
+
 
     /* Check length of arguments and return values before going any further */
     if (iArgC < 2) {
         printf("Please specify a file to read, ex. %s filename\n", pszArgV[0]);
         return 1;
     }
-    if (pdfByteBuffer == NULL) {
+    if (structPdfByteBuffer == NULL) {
         printf("Failed to allocate %lu bytes of memory for pdfByteBuffer\n", sizeof(PDF_BYTE_BUFFER));
         return 1;
     }
 
-    if (pthread_create(&threadReader, NULL, (BYTE *) PdfReader, pszArgV[1]) != 0) {
-        printf("Error when creating thread\n");
-        return 1;
-    }
-    if (pthread_create(&threadAnalyzer, NULL, (BYTE *) PdfAnalyzer, NULL) != 0) {
-        printf("Error when creating thread\n");
-        return 1;
-    }
+    sem_init(&structPdfByteBuffer->semWaitForBuffer, 0, 0);
+    sem_init(&structPdfByteBuffer->semWaitForProcessing, 0, 0);
 
-    sem_init(&pdfByteBuffer->semWaitForBuffer, 0, 0);
-    sem_init(&pdfByteBuffer->semWaitForProcessing, 0, 0);
-
-    PDF_BYTE_BUFFER *structPdfByteBuffer = (PDF_BYTE_BUFFER *) malloc(sizeof(PDF_BYTE_BUFFER));
 
     /* C89 doesn't have the void pointer, but I have to use it here according to the documentation */
-    pthread_create(&threadReader, NULL, (void *) PdfReader, pszArgV[1]);;
+    pthread_create(&threadReader, NULL, (void *) PdfReader, pszArgV[1]);
     pthread_create(&threadAnalyzer, NULL, (void *) PdfAnalyzer, NULL);
-
+    free(structPdfByteBuffer);
+    pthread_join(threadReader, NULL);
+    pthread_join(threadAnalyzer, NULL);
     return 0;
 }
 
