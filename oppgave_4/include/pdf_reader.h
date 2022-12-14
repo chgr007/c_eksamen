@@ -5,7 +5,7 @@
 
 typedef unsigned char BYTE;
 typedef struct _PDF_BYTE_BUFFER {
-    BYTE byBuffer[4096];
+    BYTE *byBuffer;
     int iFileSize;
     int iaFileBytesAnalyzed[16];
     int iErrorCode;

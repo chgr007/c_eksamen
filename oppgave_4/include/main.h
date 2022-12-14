@@ -5,7 +5,7 @@
 
 typedef unsigned char BYTE;
 typedef struct _PDF_BYTE_BUFFER {
-    BYTE byBuffer[4096];
+    char *byBuffer;
     int iFileSize;
     int iaFileBytesAnalyzed[16];
     int iErrorCode;
@@ -14,7 +14,7 @@ typedef struct _PDF_BYTE_BUFFER {
 
 } PDF_BYTE_BUFFER;
 
-void *PdfReader(char *pszFileName, PDF_BYTE_BUFFER *structPdfByteBuffer);
+void *PdfReader(char *pszFileName);
 void *PdfAnalyzer(PDF_BYTE_BUFFER *pdfByteBuffer);
 
 #endif //C_EKSAMEN_MAIN_H
