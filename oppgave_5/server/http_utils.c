@@ -164,6 +164,8 @@ int GetRequestedFile(char *szReqLine, char *szFileName) {
         printf("ERROR: Unexpected format\n");
         return ERROR;
     }
-    strcpy(szFileName, szToken);
+    /* appending . so that it will be "./filename (current folder). Could potentially be a heavy security risk to not do so "*/
+    strcpy(szFileName, ".");
+    strcat(szFileName, szToken);
     return OK;
 }

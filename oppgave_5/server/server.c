@@ -66,7 +66,13 @@ int main(int iArgC, char *pszArgV[]) {
     GetRequestedFile(szRequestLine, szFileName);
     printf("FileName %s\n", szFileName);
 
+    FILE *iFileFd = fopen(szFileName, "r");
 
+    if (iFileFd != NULL) {
+        printf("Found the file: %s\n", szFileName);
+    } else {
+        printf("File not found\n");
+    }
     // send a response back to the client
     const char *response = "HTTP/1.1 200 OK\r\n\r\n<html><body><h1>Hello, world!</h1></body></html>\r\n";
     int n = write(sockAcceptedFd, response, strlen(response));
