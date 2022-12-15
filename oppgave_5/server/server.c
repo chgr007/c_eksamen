@@ -13,8 +13,12 @@
 /* www.eastwillsecurity.com/pg3401/test.html */
 
 int main(int iArgC, char *pszArgV[]) {
-   // int sockFd, iNumConnections = 1;
-    // create a socket
+    char * szRequestLine = (char *) malloc(1024 * sizeof (char));
+    char *szFileName = (char *) malloc(1024 * sizeof (char));
+    struct sockaddr_in cli_addr;
+    char buffer[1024];
+    const char *response = "HTTP/1.1 200 OK\r\n\r\n<html><body><h1>Hello, world!</h1></body></html>\r\n";
+
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0)
     {
@@ -39,7 +43,6 @@ int main(int iArgC, char *pszArgV[]) {
     listen(sockfd, 5);
 
     // accept an incoming connection
-    struct sockaddr_in cli_addr;
     socklen_t clilen = sizeof(cli_addr);
     int sockAcceptedFd = accept(sockfd, (struct sockaddr*) &cli_addr, &clilen);
     if (sockAcceptedFd < 0)
@@ -49,7 +52,6 @@ int main(int iArgC, char *pszArgV[]) {
     }
 
     // read the incoming request
-    char buffer[1024];
     memset(buffer, 0, 1024);
 //    int n = read(sockAcceptedFd, buffer, 1023);
 //    if (n < 0)
@@ -58,23 +60,25 @@ int main(int iArgC, char *pszArgV[]) {
 //        exit(1);
 //    }
 
-    char * szRequestLine = (char *) malloc(1024 * sizeof (char));
-    char *szFileName = (char *) malloc(1024 * sizeof (char));
+
 
     ReadLine(sockAcceptedFd, szRequestLine);
     printf("RequestLine %s\n", szRequestLine);
     GetRequestedFile(szRequestLine, szFileName);
     printf("FileName %s\n", szFileName);
+    // Get the file extension
+    //char *szFileExtension = GetFileExtension(szFileName);
+    // if (szFileExtension == html || txt || .c || .h ) do text stuff
+    // else do binary stuff
 
-    FILE *iFileFd = fopen(szFileName, "r");
+    FILE *fdFile = fopen(szFileName, "r");
 
-    if (iFileFd != NULL) {
+    if (fdFile != NULL) {
         printf("Found the file: %s\n", szFileName);
     } else {
         printf("File not found\n");
     }
     // send a response back to the client
-    const char *response = "HTTP/1.1 200 OK\r\n\r\n<html><body><h1>Hello, world!</h1></body></html>\r\n";
     int n = write(sockAcceptedFd, response, strlen(response));
     if (n < 0)
     {
@@ -85,7 +89,7 @@ int main(int iArgC, char *pszArgV[]) {
     // close the socket
     close(sockAcceptedFd);
     close(sockfd);
-
+    fclose(fdFile);
     return 0;
 }
 
