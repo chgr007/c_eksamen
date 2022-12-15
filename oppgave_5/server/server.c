@@ -13,15 +13,14 @@
 /* www.eastwillsecurity.com/pg3401/test.html */
 
 int main(int iArgC, char *pszArgV[]) {
-    char * szRequestLine = (char *) malloc(1024 * sizeof (char));
-    char *szFileName = (char *) malloc(1024 * sizeof (char));
+    char *szRequestLine = (char *) malloc(1024 * sizeof(char));
+    char *szFileName = (char *) malloc(1024 * sizeof(char));
     struct sockaddr_in cli_addr;
     char buffer[1024];
     const char *response = "HTTP/1.1 200 OK\r\n\r\n<html><body><h1>Hello, world!</h1></body></html>\r\n";
 
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd < 0)
-    {
+    if (sockfd < 0) {
         perror("ERROR opening socket");
         exit(1);
     }
@@ -33,8 +32,7 @@ int main(int iArgC, char *pszArgV[]) {
     saAddr.sin_addr.s_addr = INADDR_ANY;
     saAddr.sin_port = htons(8080);
 
-    if (bind(sockfd, (struct sockaddr*) &saAddr, sizeof(saAddr)) < 0)
-    {
+    if (bind(sockfd, (struct sockaddr *) &saAddr, sizeof(saAddr)) < 0) {
         perror("ERROR on binding");
         exit(1);
     }
@@ -44,9 +42,8 @@ int main(int iArgC, char *pszArgV[]) {
 
     // accept an incoming connection
     socklen_t clilen = sizeof(cli_addr);
-    int sockAcceptedFd = accept(sockfd, (struct sockaddr*) &cli_addr, &clilen);
-    if (sockAcceptedFd < 0)
-    {
+    int sockAcceptedFd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+    if (sockAcceptedFd < 0) {
         perror("ERROR on accept");
         exit(1);
     }
@@ -67,8 +64,9 @@ int main(int iArgC, char *pszArgV[]) {
     GetRequestedFile(szRequestLine, szFileName);
     printf("FileName %s\n", szFileName);
     // Get the file extension
-    //char *szFileExtension = GetFileExtension(szFileName);
-    // if (szFileExtension == html || txt || .c || .h ) do text stuff
+    enum FILE_TYPE szFileExtension = GetFileExtension(szFileName);
+
+    // if (szFileExtension == HTML || TXT || C || H ) do text stuff
     // else do binary stuff
 
     FILE *fdFile = fopen(szFileName, "r");
@@ -80,8 +78,7 @@ int main(int iArgC, char *pszArgV[]) {
     }
     // send a response back to the client
     int n = write(sockAcceptedFd, response, strlen(response));
-    if (n < 0)
-    {
+    if (n < 0) {
         perror("ERROR writing to socket");
         exit(1);
     }
@@ -91,6 +88,37 @@ int main(int iArgC, char *pszArgV[]) {
     close(sockfd);
     fclose(fdFile);
     return 0;
+}
+
+int GetFileExtension(char *szFileName) {
+    char szTmp[256];
+
+    if (szFileName == NULL || strlen(szFileName) == 0) {
+        return ERROR;
+    }
+
+    strcpy(szTmp, szFileName);
+
+    char *szTok = strtok(szTmp, ".");
+    strtok(NULL, ".");
+
+    if (szTok == NULL) {
+        return ERROR;
+    }
+
+    if (strcmp(szTok, "html") == 0) {
+        return HTML;
+    } else if (strcmp(szTok, "txt") == 0) {
+        return TXT;
+    } else if (strcmp(szTok, "c") == 0) {
+        return C;
+    } else if (strcmp(szTok, "h") == 0) {
+        return H;
+    } else if(strcmp(szTok, "o") == 0) {
+        return O;
+    } else {
+        return ERROR;
+    }
 }
 
 /* Opens a TCP socket connection and returns it. */
