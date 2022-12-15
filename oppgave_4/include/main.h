@@ -6,10 +6,11 @@
 typedef unsigned char BYTE;
 typedef struct _PDF_BYTE_BUFFER {
     BYTE byBuffer[4096];
-    int iFileSize;
+    int iNumBytes;
     int iaFileBytesAnalyzed[16];
     int iErrorCode;
-    int iDoneAnalyzing;
+    int iDoneReading;
+    char szFileName[256];
     sem_t semWaitForBuffer;
     sem_t semWaitForProcessing;
 } PDF_BYTE_BUFFER;

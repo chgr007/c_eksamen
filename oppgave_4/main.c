@@ -12,9 +12,7 @@
  * and keeps track of the byte-composition (in HEX).
  * */
 int main(int iArgC, char *pszArgV[]) {
-    puts("HVOR FAEN 1");
     pthread_t threadReader, threadAnalyzer;
-    puts("HVOR FAEN 2");
 
     PDF_BYTE_BUFFER *structPdfByteBuffer = malloc(sizeof(PDF_BYTE_BUFFER));
     memset(structPdfByteBuffer, 0, sizeof(PDF_BYTE_BUFFER));
@@ -22,8 +20,11 @@ int main(int iArgC, char *pszArgV[]) {
     structPdfByteBuffer->iDoneAnalyzing = 0;
     /* Check length of arguments and return values before going any further */
     if (iArgC < 2) {
-        printf("Please specify a file to read, ex. %s filename\n", pszArgV[0]);
-        return 1;
+        printf("no file to read specified, ex. %s filename\n", pszArgV[0]);
+        printf("Defaulting to: \"PG3401-Hjemmeeksamen-14dager-H22.pdf\" \n");
+        strcpy(structPdfByteBuffer->szFileName, "PG3401-Hjemmeeksamen-14dager-H22.pdf");
+    } else {
+        strcpy(structPdfByteBuffer->szFileName, pszArgV[1]);
     }
     if (structPdfByteBuffer == NULL) {
         printf("Failed to allocate %lu bytes of memory for pdfByteBuffer\n", sizeof(PDF_BYTE_BUFFER));
@@ -50,15 +51,13 @@ void *PdfReader(PDF_BYTE_BUFFER *structPdfByteBuffer) {
     long lFileBytes;
     char *szFileContent;
     int iBytesRead = 0;
-    puts("HVOR FAEN 344343");
 
     szFileContent = (char *) malloc(5000);
-    puts("HVOR FAEN 032");
 
     // open a file called text_to_read.txt, return 1 if there's an error opening the file
-    FILE *fdFile = fopen("PG3401-Hjemmeeksamen-14dager-H22.pdf", "r");
+    FILE *fdFile = fopen(structPdfByteBuffer->szFileName, "r");
     if (fdFile == NULL) {
-        printf("Error opening file");
+        printf("Error opening file\n");
         return (void *) ERROR;
     }
 
@@ -66,10 +65,8 @@ void *PdfReader(PDF_BYTE_BUFFER *structPdfByteBuffer) {
     // memory for the file content. TODO: Check for errors on fseek and ftell!
     fseek(fdFile, 0L, SEEK_END);
     lFileBytes = ftell(fdFile);
-    puts("HVOR FAEN 1");
 
     fseek(fdFile, 0L, SEEK_SET);
-    puts("HVOR FAEN 2");
 
     // Read the file content into the allocated memory. TODO: Check for errors on fread!
     // I could probably just do this in one operation. So that's a nother TODO. Now my plan is to read the file, then send the bytes in chunks.
@@ -78,41 +75,41 @@ void *PdfReader(PDF_BYTE_BUFFER *structPdfByteBuffer) {
 
     while (iBytesRead < lFileBytes) {
         printf("Read %d bytes from file\n", iBytesRead);
-        /* The file position pointer is incremented by n bytes fread reads */
+        /* The file position pointer is incremented by n bytes fread reads
+         * TODO: Kan bare fread-e rett i byBuffer her vel?
+         * */
         int iChunk = fread(szFileContent, 1, 4096, fdFile);
-        printf("%d\n", iChunk);
+
+        printf("Read: %d bytes\n", iChunk);
         memcpy(structPdfByteBuffer->byBuffer, szFileContent, iChunk);
-        structPdfByteBuffer->iFileSize = iChunk;
+        structPdfByteBuffer->iNumBytes = iChunk;
 
         iBytesRead += iChunk;
         sem_post(&structPdfByteBuffer->semWaitForBuffer);
         if (!feof(fdFile)) {
             sem_wait(&structPdfByteBuffer->semWaitForProcessing);
         } else {
-            structPdfByteBuffer->iDoneAnalyzing = 1;
+            structPdfByteBuffer->iDoneReading = 1;
         }
         printf("Inside pdfReader\n");
     }
-    printf("%X", szFileContent[4096]);
 
-    //sem_post(&structPdfByteBuffer->semWaitForDone);
-
-    // Close the file and free the memory
+    // Close the file and free the memory from the buffer
     fclose(fdFile);
+    free(szFileContent);
 
     return (void *) OK;
 }
 
 void *PdfAnalyzer(PDF_BYTE_BUFFER *pdfByteBuffer) {
-    while (pdfByteBuffer->iDoneAnalyzing == 0) {
+    while (pdfByteBuffer->iDoneReading == 0) {
         sem_wait(&pdfByteBuffer->semWaitForBuffer);
-        printf("Inside pdfanalyzer ");
+        printf("Inside pdfanalyzer\n");
         sem_post(&pdfByteBuffer->semWaitForProcessing);
-        for (int i = 0; i < pdfByteBuffer->iFileSize; i++) {
+        for (int i = 0; i < pdfByteBuffer->iNumBytes; i++) {
             printf("%X", pdfByteBuffer->byBuffer[i]);
         }
-        printf("\n");
-        printf("File size: %d\n", pdfByteBuffer->iFileSize);
+        printf("\nFile size: %d\n", pdfByteBuffer->iNumBytes);
     }
     return NULL;
 }
