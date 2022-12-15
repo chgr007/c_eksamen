@@ -17,7 +17,9 @@ int main(int iArgC, char *pszArgV[]) {
     PDF_BYTE_BUFFER *structPdfByteBuffer = malloc(sizeof(PDF_BYTE_BUFFER));
     memset(structPdfByteBuffer, 0, sizeof(PDF_BYTE_BUFFER));
     bzero(structPdfByteBuffer->byBuffer, 4096);
-    structPdfByteBuffer->iDoneAnalyzing = 0;
+    structPdfByteBuffer->iDoneReading = 0;
+
+
     /* Check length of arguments and return values before going any further */
     if (iArgC < 2) {
         printf("no file to read specified, ex. %s filename\n", pszArgV[0]);
@@ -42,7 +44,12 @@ int main(int iArgC, char *pszArgV[]) {
     pthread_join(threadReader, NULL);
     sem_destroy(&structPdfByteBuffer->semWaitForBuffer);
     sem_destroy(&structPdfByteBuffer->semWaitForProcessing);
-    printf("Joning threads");
+    printf("Joning threads\n");
+    for (int i = 0; i < 255; i++) {
+        if (structPdfByteBuffer->iAnalyzedBytes[i] > 0) {
+            printf("Byte: 0x%02X, Count: %d\n", i, structPdfByteBuffer->iAnalyzedBytes[i]);
+        }
+    }
     free(structPdfByteBuffer);
     return 0;
 }
@@ -85,11 +92,16 @@ void *PdfReader(PDF_BYTE_BUFFER *structPdfByteBuffer) {
         structPdfByteBuffer->iNumBytes = iChunk;
 
         iBytesRead += iChunk;
+        if (ferror(fdFile)) {
+            printf("Error reading file\n");
+            return (void *) ERROR;
+        }
+
         sem_post(&structPdfByteBuffer->semWaitForBuffer);
-        if (!feof(fdFile)) {
-            sem_wait(&structPdfByteBuffer->semWaitForProcessing);
-        } else {
+        if (feof(fdFile)) {
             structPdfByteBuffer->iDoneReading = 1;
+        } else {
+            sem_wait(&structPdfByteBuffer->semWaitForProcessing);
         }
         printf("Inside pdfReader\n");
     }
@@ -107,9 +119,10 @@ void *PdfAnalyzer(PDF_BYTE_BUFFER *pdfByteBuffer) {
         printf("Inside pdfanalyzer\n");
         sem_post(&pdfByteBuffer->semWaitForProcessing);
         for (int i = 0; i < pdfByteBuffer->iNumBytes; i++) {
-            printf("%X", pdfByteBuffer->byBuffer[i]);
+            int iIntRepresentation = pdfByteBuffer->byBuffer[i];
+            pdfByteBuffer->iAnalyzedBytes[iIntRepresentation]++;
         }
-        printf("\nFile size: %d\n", pdfByteBuffer->iNumBytes);
+        printf("\nbyte chunk size: %d\n", pdfByteBuffer->iNumBytes);
     }
     return NULL;
 }
