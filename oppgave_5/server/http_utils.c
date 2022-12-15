@@ -42,7 +42,8 @@ struct URL* ParseURL(char *szUrl) {
     /* Gets the path */
     while ((szToken = strtok(NULL,"/")) != NULL) {
         strncat(szParams, "/", 2);
-        strncat(szParams, szToken, strlen(szToken) + 1);
+        //strncat(szParams, szToken, strlen(szToken) + 1);
+        strcat(szParams, szToken);
     }
     strcpy(structUrl->szPath, szParams);
 
@@ -131,7 +132,7 @@ int SplitHeaders(char *szLineBuffer, struct HTTP_RESPONSE *structHttpResponse, i
 }
 
 /* Reads one line of the response and updates a buffer */
-int ReadLine(int sockFd,char *szLineBuffer) {
+int ReadLine(int sockFd, char *szLineBuffer) {
     char *szReceivedMessageBuffer = (char *) malloc(sizeof(char));
     bzero(szReceivedMessageBuffer, 1);
 
@@ -146,8 +147,23 @@ int ReadLine(int sockFd,char *szLineBuffer) {
             else if (*szReceivedMessageBuffer != '\r') {
                 strncat(szLineBuffer, szReceivedMessageBuffer, 1);
             }
-            else strncat(szLineBuffer, "\0", 1);
+            // strncat legger til \0
+            //else strncat(szLineBuffer, "\0", 1);
         }
     }
     free(szReceivedMessageBuffer);
+}
+
+/* The function takes in a request line and returns the file/path to the szFileName pointer
+ * The requested path / file resides in the middle of the request line with space as a delimiter. */
+int GetRequestedFile(char *szReqLine, char *szFileName) {
+    char *szToken;
+    szToken = strtok(szReqLine, " ");
+    szToken = strtok(NULL, " ");
+    if (szToken == NULL) {
+        printf("ERROR: Unexpected format\n");
+        return ERROR;
+    }
+    strcpy(szFileName, szToken);
+    return OK;
 }

@@ -4,6 +4,7 @@
 #include <netdb.h>
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 /* Custom includes */
 #include "./include/server.h"
@@ -12,34 +13,72 @@
 /* www.eastwillsecurity.com/pg3401/test.html */
 
 int main(int iArgC, char *pszArgV[]) {
-    int sockFd, iNumConnections = 1;
-    struct sockaddr_in saAddr = {0};
+   // int sockFd, iNumConnections = 1;
+    // create a socket
+    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfd < 0)
+    {
+        perror("ERROR opening socket");
+        exit(1);
+    }
 
+    // bind the socket to a port
+    struct sockaddr_in saAddr;
+    memset(&saAddr, 0, sizeof(saAddr));
     saAddr.sin_family = AF_INET;
-    saAddr.sin_port = htons(80);
-    saAddr.sin_addr.s_addr = AF_LOCAL;
+    saAddr.sin_addr.s_addr = INADDR_ANY;
+    saAddr.sin_port = htons(8080);
 
-    if (sockFd = socket(AF_INET, SOCK_STREAM, 0) < 0) {
-        printf("ERROR opening socket\n");
-        return 1;
-    }
-    if (bind(sockFd, (struct sockaddr *)&saAddr, sizeof(saAddr)) < 0) {
-        printf("ERROR on binding socket\n");
-        return 1;
+    if (bind(sockfd, (struct sockaddr*) &saAddr, sizeof(saAddr)) < 0)
+    {
+        perror("ERROR on binding");
+        exit(1);
     }
 
-    if (listen(sockFd, iNumConnections) < 0) {
-        printf("ERROR on listen\n");
-        return 1;
-    }
+    // listen for incoming connections
+    listen(sockfd, 5);
 
-    // TODO: Refactor this shit
+    // accept an incoming connection
     struct sockaddr_in cli_addr;
     socklen_t clilen = sizeof(cli_addr);
-    if (accept(sockFd, (struct sockaddr*) &cli_addr, &clilen) < 0) {
-        printf("ERROR on accept\n");
-        return 1;
+    int sockAcceptedFd = accept(sockfd, (struct sockaddr*) &cli_addr, &clilen);
+    if (sockAcceptedFd < 0)
+    {
+        perror("ERROR on accept");
+        exit(1);
     }
+
+    // read the incoming request
+    char buffer[1024];
+    memset(buffer, 0, 1024);
+//    int n = read(sockAcceptedFd, buffer, 1023);
+//    if (n < 0)
+//    {
+//        perror("ERROR reading from socket");
+//        exit(1);
+//    }
+
+    char * szRequestLine = (char *) malloc(1024 * sizeof (char));
+    char *szFileName = (char *) malloc(1024 * sizeof (char));
+
+    ReadLine(sockAcceptedFd, szRequestLine);
+    printf("RequestLine %s\n", szRequestLine);
+    GetRequestedFile(szRequestLine, szFileName);
+    printf("FileName %s\n", szFileName);
+
+
+    // send a response back to the client
+    const char *response = "HTTP/1.1 200 OK\r\n\r\n<html><body><h1>Hello, world!</h1></body></html>\r\n";
+    int n = write(sockAcceptedFd, response, strlen(response));
+    if (n < 0)
+    {
+        perror("ERROR writing to socket");
+        exit(1);
+    }
+
+    // close the socket
+    close(sockAcceptedFd);
+    close(sockfd);
 
     return 0;
 }

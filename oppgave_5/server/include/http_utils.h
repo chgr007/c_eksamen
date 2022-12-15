@@ -27,5 +27,5 @@ int SendMessage(int sockFd, struct URL *structUrl);
 int SplitHeaders(char *szLineBuffer, struct HTTP_RESPONSE *structHttpResponse, int sockFd);
 struct HTTP_RESPONSE* GetHeaders(int sockFd);
 int GetPayload(struct HTTP_RESPONSE *structHttpResponse, int sockFd);
-
+int GetRequestedFile(char *szReqLine, char *szFileName);
 #endif //C_PROG_HTTP_UTILS_H
