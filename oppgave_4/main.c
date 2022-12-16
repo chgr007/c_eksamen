@@ -72,7 +72,6 @@ void *PdfReader(PDF_BYTE_BUFFER *structPdfByteBuffer) {
     // memory for the file content. TODO: Check for errors on fseek and ftell!
     fseek(fdFile, 0L, SEEK_END);
     lFileBytes = ftell(fdFile);
-
     fseek(fdFile, 0L, SEEK_SET);
 
     // Read the file content into the allocated memory. TODO: Check for errors on fread!

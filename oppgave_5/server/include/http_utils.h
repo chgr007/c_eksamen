@@ -39,6 +39,8 @@ typedef struct _FILE_REQ {
 } FILE_REQ;
 
 
+int WriteFileToSocket(FILE *fdFile, int sockFd, long iFileSize);
+
 int BindAndListen();
 
 struct URL *ParseURL(char *szUrl);
