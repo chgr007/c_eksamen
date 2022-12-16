@@ -9,48 +9,61 @@
 #include <sys/types.h>
 #include "include/http_utils.h"
 
-struct HTTP_RESPONSE *GetHeaders(int sockFd) {
-    char *szLineBuffer, *szToken;
-    struct HTTP_RESPONSE *structHttpResponse;
-    szLineBuffer = (char *) malloc(sizeof(char) * 256);
-    structHttpResponse = malloc(sizeof(struct HTTP_RESPONSE));
-
-    /* Get the first line / status line */
-    ReadLine(sockFd, szLineBuffer);
-    szToken = strtok(szLineBuffer, " ");
-    strcpy(structHttpResponse->szVersion, szToken);
-    szToken = strtok(NULL, " ");
-    structHttpResponse->iStatusCode = atoi(szToken);
-    /* Check if the first line is formatted as expected, could be more elaborated (could use RegEx if C has support for it) */
-    if (structHttpResponse->iStatusCode == 0) {
-        printf("ERROR: Unexpected format\n");
-        return NULL;
-    }
-    szToken = strtok(NULL, " ");
-    strcpy(structHttpResponse->szStatusMessage, szToken);
-
-    /* Get header fields */
-    SplitHeaders(szLineBuffer, structHttpResponse, sockFd);
-
-    free(szLineBuffer);
-    szLineBuffer = NULL;
-    return structHttpResponse;
-}
 
 int ParseRequestHeaders(int sockFd, HTTP_REQUEST *structRequest) {
     char *szReqLine = (char *) malloc(sizeof(char) * 2048);
     /* Get the first line  */
     ReadLine(sockFd, szReqLine);
     ParseRequestLine(szReqLine, structRequest);
+    structRequest->szFileExt = GetFileExtension(structRequest->szFilePath);
+    // print the fileExt
+    printf("File extension: %d\n", structRequest->szFileExt);
     free(szReqLine);
+
+    if (SplitHeaders(structRequest, sockFd) != OK) {
+        return -1;
+    }
+
 }
 
 
+int GetFileExtension(char *szFileName) {
+    char szTmp[256];
+
+    if (szFileName == NULL || strlen(szFileName) == 0) {
+        return ERROR;
+    }
+
+    strcpy(szTmp, szFileName);
+
+    char *szTok = strtok(szTmp, ".");
+    strtok(NULL, ".");
+
+    if (szTok == NULL) {
+        return ERROR;
+    }
+
+    if (strcmp(szTok, "html") == 0) {
+        return HTML;
+    } else if (strcmp(szTok, "txt") == 0) {
+        return TXT;
+    } else if (strcmp(szTok, "c") == 0) {
+        return C;
+    } else if (strcmp(szTok, "h") == 0) {
+        return H;
+    } else if (strcmp(szTok, "o") == 0) {
+        return O;
+    } else {
+        return ERROR;
+    }
+}
+
 /* The function takes in a request line and returns the file/path to the szFileName pointer
  * The requested path / file resides in the middle of the request line with space as a delimiter. */
+
 static int ParseRequestLine(char *szRequestLine, HTTP_REQUEST *structReq) {
     char *szToken;
-    szToken = strtok(structReq, " ");
+    szToken = strtok(szRequestLine, " ");
 
     // Crude validity check. TODO: Regex pattern matching here if time
     if (szToken == NULL) {
@@ -83,57 +96,48 @@ int AcceptConnection(int serverSockFd) {
     socklen_t clilen = sizeof(cli_addr);
     char *szRequestLine;
     char *szFileReadOption;
-    FILE_REQ *structFileReq;
+    HTTP_REQUEST *structReq;
 
     int sockClientFd = accept(serverSockFd, (struct sockaddr *) &cli_addr, &clilen);
     const char *response = "HTTP/1.1 200 OK\r\n\r\n<html><body><h1>Hello, world!</h1></body></html>\r\n";
-    printf("Inside loop, and accepted");
+    printf("Accepted connection\n");
 
     if (sockClientFd > -1) {
         szRequestLine = (char *) malloc(1024 * sizeof(char));
         szFileReadOption = malloc(sizeof(char) * 3);
-        structFileReq = (FILE_REQ *) malloc(sizeof(FILE_REQ));
+        structReq = (HTTP_REQUEST *) malloc(sizeof(HTTP_REQUEST));
         long lFileSize;
 
         bzero(szRequestLine, 1024);
         bzero(szFileReadOption, 3);
 
-        // read the incoming request
-        ReadLine(sockClientFd, szRequestLine);
-        printf("RequestLine %s\n", szRequestLine);
-        ParseFileRequest(szRequestLine, structFileReq);
-        printf("FileName %s\n", structFileReq->szFilePath);
+        ParseRequestHeaders(sockClientFd, structReq);
         // Get the file extension
 
+        printf("Method: %s\n", structReq->szMethod);
+        if (strcmp(structReq->szMethod, "GET") != 0) {
+            printf("ERROR: Method not supported\n");
+            close(sockClientFd);
+            return ERROR;
+        }
         /* Check if we got a supported text format, otherwise read the file as binary */
 
         bzero(szFileReadOption, 3);
-        if (structFileReq->szFileExt == HTML || structFileReq->szFileExt == TXT || structFileReq->szFileExt == C ||
-            structFileReq->szFileExt == H) {
+        if (structReq->szFileExt == HTML || structReq->szFileExt == TXT || structReq->szFileExt == C ||
+            structReq->szFileExt == H) {
             strcpy(szFileReadOption, "r");
         } else {
             strcpy(szFileReadOption, "rb");
         }
 
-        FILE *fdFile = fopen(structFileReq->szFilePath, szFileReadOption);
+        FILE *fdFile = fopen(structReq->szFilePath, szFileReadOption);
 
         if (fdFile != NULL) {
-            printf("Found the file: %s\n", structFileReq->szFilePath);
+            printf("Found the file: %s\n", structReq->szFilePath);
             fseek(fdFile, 0L, SEEK_END);
             lFileSize = ftell(fdFile);
             fseek(fdFile, 0L, SEEK_SET);
-            //WriteFileToSocket(fdFile, &sockClientFd, lFileSize);
-
-
-            int iBytesRead;
-            const char *responseHeader = "HTTP/1.1 200 OK\r\n\r\n";
-            const char *response = "HTTP/1.1 200 OK\r\n\r\n<html><body><h1>Hello, world!</h1></body></html>\r\n";
-
-            //iBytesRead = fread(byFileBuffer, 1, iFileSize, fdFile);
-            printf("Got called!\n");
-            send(sockClientFd, response, strlen(response), 0);
-
-
+            WriteFileToSocket(fdFile, sockClientFd, lFileSize);
 
             // close the socket
             fclose(fdFile);
@@ -148,61 +152,60 @@ int AcceptConnection(int serverSockFd) {
 }
 
 
-int WriteFileToSocket(FILE *fdFile, int *sockClientFd, long iFileSize) {
+int WriteFileToSocket(FILE *fdFile, int sockClientFd, long iFileSize) {
     /* Size of an Ethernet frame */
     unsigned char byFileBuffer[iFileSize];
     int iBytesRead;
     const char *responseHeader = "HTTP/1.1 200 OK\r\n\r\n";
-    const char *response = "HTTP/1.1 200 OK\r\n\r\n<html><body><h1>Hello, world!</h1></body></html>\r\n";
+    //const char *response = "HTTP/1.1 200 OK\r\n\r\n<html><body><h1>Hello, world!</h1></body></html>\r\n";
 
-    //iBytesRead = fread(byFileBuffer, 1, iFileSize, fdFile);
-    printf("Got called!\n");
-    send(*sockClientFd, response, strlen(response), 0);
+    iBytesRead = fread(byFileBuffer, 1, iFileSize, fdFile);
+    printf("Writing to socket!\n");
+    //send(*sockClientFd, response, strlen(response), 0);
 //    write(sockFd, responseHeader, strlen(responseHeader));
 //    write(sockFd, byFileBuffer, iBytesRead);
 
-//    while (!feof(fdFile)) {
-//        iBytesRead = fread(byFileBuffer, 1, 1500, fdFile);
-//
-//        // Send 500 internal server error or something
-//        if (ferror(fdFile)) {
-//            printf("Error reading file\n");
-//            fclose(fdFile);
-//            close(sockFd);
-//            break;
-//        }
-//        if (write(sockFd, byFileBuffer, iBytesRead) < 0) {
-//            printf("Error writing to socket\n");
-//            break;
-//        }
-//    }
+    while (!feof(fdFile)) {
+        iBytesRead = fread(byFileBuffer, 1, 1500, fdFile);
+
+        // Send 500 internal server error or something
+        if (ferror(fdFile)) {
+            printf("Error reading file\n");
+            fclose(fdFile);
+            close(sockClientFd);
+            break;
+        }
+        if (write(sockClientFd, byFileBuffer, iBytesRead) < 0) {
+            printf("Error writing to socket\n");
+            break;
+        }
+    }
 
 }
 
 
 /* Gets the header fields value and sets the HTTP_RESPONSE pointers fields accordingly */
-int SplitHeaders(char *szLineBuffer, struct HTTP_RESPONSE *structHttpResponse, int sockFd) {
+int SplitHeaders(HTTP_REQUEST *structHttpRequest, int sockFd) {
     char *szToken;
-    bzero(szLineBuffer, 256);
+    char *szLineBuffer = (char *) malloc(1024 * sizeof(char));
+    bzero(szLineBuffer, 1024);
 
     /* Loops through one by one line of the response, until it receives a blank NULL terminated line */
     ReadLine(sockFd, szLineBuffer);
     while (strcmp(szLineBuffer, "\0") != 0) {
         szToken = strtok(szLineBuffer, ": ");
 
-        if (strcmp(szToken, "Server") == 0) {
+        if (strcmp(szToken, "Content-Type") == 0) {
             szToken = strtok(NULL, ": ");
-            strcpy(structHttpResponse->szServer, szToken);
-        } else if (strcmp(szToken, "Content-Type") == 0) {
-            szToken = strtok(NULL, ": ");
-            strcpy(structHttpResponse->szContentType, szToken);
+            strcpy(structHttpRequest->structHeaders->szContentType, szToken);
         } else if (strcmp(szToken, "Content-Length") == 0) {
             szToken = strtok(NULL, ": ");
-            structHttpResponse->iContentLength = atoi(szToken);
+            structHttpRequest->structHeaders->iContentLength = atoi(szToken);
         }
         bzero(szLineBuffer, 256);
         ReadLine(sockFd, szLineBuffer);
     }
+    free(szLineBuffer);
 }
 
 /* Reads one line of the response and updates a buffer */

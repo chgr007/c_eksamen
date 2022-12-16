@@ -43,7 +43,7 @@ static int ParseRequestLine(char *szRequestLine, HTTP_REQUEST *structRequest);
 
 int ParseRequestHeaders(int sockFd, HTTP_REQUEST *structRequest);
 
-int WriteFileToSocket(FILE *fdFile, int *sockFd, long iFileSize);
+int WriteFileToSocket(FILE *fdFile, int sockFd, long iFileSize);
 
 int AcceptConnection(int serverSockFd);
 
@@ -53,8 +53,9 @@ struct URL *ParseURL(char *szUrl);
 
 int ReadLine(int sockFd, char *szLineBuffer);
 
+static int *GetHeaders(int sockFd, HTTP_REQUEST *structRequest);
 
-int SplitHeaders(char *szLineBuffer, struct HTTP_RESPONSE *structHttpResponse, int sockFd);
+int SplitHeaders(HTTP_REQUEST *structHttpRequest, int sockFd);
 
 int GetFile(char *szFilePath, char *szFileBuffer);
 
