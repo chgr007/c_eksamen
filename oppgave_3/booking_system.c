@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 
 int AddBookingToList(BOOKING *pBooking, LIST *pList) {
     NODE *pThis = CreateNode((BYTE *) pBooking, sizeof(BOOKING));
@@ -46,8 +47,40 @@ BOOKING *CreateBooking (char *szName, char *szRoom, unsigned int iDate, int iDay
     return pBooking;
 }
 
+/*
+ *  First I want to convert the strings to lower case. Note that this will only work with ASCII characters and not UTF-8.
+ *  As with everything in C, I've got to do most of the work here and iterate over every letter.
+ *  Then I compare the two resulting strings
+ * */
+BOOKING *FindBookingByName(LIST *pList, char *szName) {
 
-// Er noe feil her.
+
+    NODE *pCurrentNode = pList->pHead;
+
+    while (pCurrentNode != NULL) {
+        BOOKING *pBooking = (BOOKING *) pCurrentNode->pData;
+        char *szNameLower = (char *) malloc(strlen(pBooking->szName) + 1);
+        char *szNameToCompareLower = (char *) malloc(strlen(szName) + 1);
+
+        strcpy(szNameLower, pBooking->szName);
+        strcpy(szNameToCompareLower, szName);
+
+        int i = 0, j = 0;
+        for ( ; i < strlen(szNameLower); i++) {
+            szNameLower[i] = tolower(szNameLower[i]);
+        }
+        for ( ; j < strlen(szNameToCompareLower); j++) {
+            szNameToCompareLower[j] = tolower(szNameToCompareLower[j]);
+        }
+
+        if (strcmp(szNameLower, szNameToCompareLower) == 0) {
+            return pBooking;
+        }
+        pCurrentNode = pCurrentNode->pNext;
+    }
+    return NULL;
+}
+
 int RemoveNodeFromList(LIST *pList, NODE *pNode) {
     // Check if element is first or last in the list before deleting
     if (pNode->pPrev == NULL) {
@@ -84,6 +117,15 @@ int RemoveOldBookings(LIST *pList) {
     }
     return OK;
 }
+int SummerizeBookingForOneDay(LIST *pList, unsigned int iDate) {
+    // First convert iDate to struct tm, then find bookings for that day in the pList
+    // Then sum up the prices for all bookings for that day
+    // Then return the sum
+    struct tm *pDate = localtime((time_t *) &iDate);
+
+    printf("Date: %d-%d-%d", pDate->tm_mday, pDate->tm_mon, pDate->tm_year);
+}
+
 
 /* Free memory in the booking struct, then the memory for the struct itself */
 static int FreeBooking (BOOKING *pBooking) {

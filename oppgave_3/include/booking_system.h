@@ -15,9 +15,9 @@ typedef struct _BOOKING {
 int RemoveOldBookings(LIST *pList);
 
 int RemoveNodeFromList(LIST *pList, NODE *pNode);
-
+BOOKING *FindBookingByName(LIST *pList, char *szName);
 int AddBookingToList(BOOKING *pBooking, LIST *pList);
-
+int SummerizeBookingForOneDay(LIST *pList, unsigned int iDate);
 int RemoveLastBooking(LIST *pList);
 
 static int FreeBooking(BOOKING *pBooking);
