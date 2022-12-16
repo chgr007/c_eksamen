@@ -2,10 +2,14 @@
 #include <sys/socket.h>
 #include <string.h>
 #include <stdlib.h>
-
+#include <unistd.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <arpa/inet.h>
+#include <sys/types.h>
 #include "include/http_utils.h"
 
-struct HTTP_RESPONSE* GetHeaders(int sockFd) {
+struct HTTP_RESPONSE *GetHeaders(int sockFd) {
     char *szLineBuffer, *szToken;
     struct HTTP_RESPONSE *structHttpResponse;
     szLineBuffer = (char *) malloc(sizeof(char) * 256);
@@ -13,7 +17,7 @@ struct HTTP_RESPONSE* GetHeaders(int sockFd) {
 
     /* Get the first line / status line */
     ReadLine(sockFd, szLineBuffer);
-    szToken = strtok(szLineBuffer,  " ");
+    szToken = strtok(szLineBuffer, " ");
     strcpy(structHttpResponse->szVersion, szToken);
     szToken = strtok(NULL, " ");
     structHttpResponse->iStatusCode = atoi(szToken);
@@ -33,6 +37,148 @@ struct HTTP_RESPONSE* GetHeaders(int sockFd) {
     return structHttpResponse;
 }
 
+int ParseRequestHeaders(int sockFd, HTTP_REQUEST *structRequest) {
+    char *szReqLine = (char *) malloc(sizeof(char) * 2048);
+    /* Get the first line  */
+    ReadLine(sockFd, szReqLine);
+    ParseRequestLine(szReqLine, structRequest);
+    free(szReqLine);
+}
+
+
+/* The function takes in a request line and returns the file/path to the szFileName pointer
+ * The requested path / file resides in the middle of the request line with space as a delimiter. */
+static int ParseRequestLine(char *szRequestLine, HTTP_REQUEST *structReq) {
+    char *szToken;
+    szToken = strtok(structReq, " ");
+
+    // Crude validity check. TODO: Regex pattern matching here if time
+    if (szToken == NULL) {
+        printf("ERROR: Unexpected format\n");
+        return ERROR;
+    }
+
+    strcpy(structReq->szMethod, szToken);
+    szToken = strtok(NULL, " ");
+
+    if (strlen(szToken) > 255) {
+        printf("ERROR: Filename too long. Path and name must be less than 255 characters\n");
+        return ERROR;
+    }
+    /* appending . so that it will be "./filename" (current folder). */
+    strcpy(structReq->szFilePath, ".");
+    strcat(structReq->szFilePath, szToken);
+
+    if (!(structReq->szFileExt = GetFileExtension(structReq->szFilePath))) {
+        return ERROR;
+    }
+
+    return OK;
+}
+
+
+
+int AcceptConnection(int serverSockFd) {
+    struct sockaddr_in cli_addr;
+    socklen_t clilen = sizeof(cli_addr);
+    char *szRequestLine;
+    char *szFileReadOption;
+    FILE_REQ *structFileReq;
+
+    int sockClientFd = accept(serverSockFd, (struct sockaddr *) &cli_addr, &clilen);
+    const char *response = "HTTP/1.1 200 OK\r\n\r\n<html><body><h1>Hello, world!</h1></body></html>\r\n";
+    printf("Inside loop, and accepted");
+
+    if (sockClientFd > -1) {
+        szRequestLine = (char *) malloc(1024 * sizeof(char));
+        szFileReadOption = malloc(sizeof(char) * 3);
+        structFileReq = (FILE_REQ *) malloc(sizeof(FILE_REQ));
+        long lFileSize;
+
+        bzero(szRequestLine, 1024);
+        bzero(szFileReadOption, 3);
+
+        // read the incoming request
+        ReadLine(sockClientFd, szRequestLine);
+        printf("RequestLine %s\n", szRequestLine);
+        ParseFileRequest(szRequestLine, structFileReq);
+        printf("FileName %s\n", structFileReq->szFilePath);
+        // Get the file extension
+
+        /* Check if we got a supported text format, otherwise read the file as binary */
+
+        bzero(szFileReadOption, 3);
+        if (structFileReq->szFileExt == HTML || structFileReq->szFileExt == TXT || structFileReq->szFileExt == C ||
+            structFileReq->szFileExt == H) {
+            strcpy(szFileReadOption, "r");
+        } else {
+            strcpy(szFileReadOption, "rb");
+        }
+
+        FILE *fdFile = fopen(structFileReq->szFilePath, szFileReadOption);
+
+        if (fdFile != NULL) {
+            printf("Found the file: %s\n", structFileReq->szFilePath);
+            fseek(fdFile, 0L, SEEK_END);
+            lFileSize = ftell(fdFile);
+            fseek(fdFile, 0L, SEEK_SET);
+            //WriteFileToSocket(fdFile, &sockClientFd, lFileSize);
+
+
+            int iBytesRead;
+            const char *responseHeader = "HTTP/1.1 200 OK\r\n\r\n";
+            const char *response = "HTTP/1.1 200 OK\r\n\r\n<html><body><h1>Hello, world!</h1></body></html>\r\n";
+
+            //iBytesRead = fread(byFileBuffer, 1, iFileSize, fdFile);
+            printf("Got called!\n");
+            send(sockClientFd, response, strlen(response), 0);
+
+
+
+            // close the socket
+            fclose(fdFile);
+        } else {
+            /* Write error message */
+        }
+    } else {
+        printf("ERROR on accept\n");
+        return 1;
+    }
+    close(sockClientFd);
+}
+
+
+int WriteFileToSocket(FILE *fdFile, int *sockClientFd, long iFileSize) {
+    /* Size of an Ethernet frame */
+    unsigned char byFileBuffer[iFileSize];
+    int iBytesRead;
+    const char *responseHeader = "HTTP/1.1 200 OK\r\n\r\n";
+    const char *response = "HTTP/1.1 200 OK\r\n\r\n<html><body><h1>Hello, world!</h1></body></html>\r\n";
+
+    //iBytesRead = fread(byFileBuffer, 1, iFileSize, fdFile);
+    printf("Got called!\n");
+    send(*sockClientFd, response, strlen(response), 0);
+//    write(sockFd, responseHeader, strlen(responseHeader));
+//    write(sockFd, byFileBuffer, iBytesRead);
+
+//    while (!feof(fdFile)) {
+//        iBytesRead = fread(byFileBuffer, 1, 1500, fdFile);
+//
+//        // Send 500 internal server error or something
+//        if (ferror(fdFile)) {
+//            printf("Error reading file\n");
+//            fclose(fdFile);
+//            close(sockFd);
+//            break;
+//        }
+//        if (write(sockFd, byFileBuffer, iBytesRead) < 0) {
+//            printf("Error writing to socket\n");
+//            break;
+//        }
+//    }
+
+}
+
 
 /* Gets the header fields value and sets the HTTP_RESPONSE pointers fields accordingly */
 int SplitHeaders(char *szLineBuffer, struct HTTP_RESPONSE *structHttpResponse, int sockFd) {
@@ -47,11 +193,10 @@ int SplitHeaders(char *szLineBuffer, struct HTTP_RESPONSE *structHttpResponse, i
         if (strcmp(szToken, "Server") == 0) {
             szToken = strtok(NULL, ": ");
             strcpy(structHttpResponse->szServer, szToken);
-        } else if (strcmp(szToken, "Content-Type")  == 0) {
+        } else if (strcmp(szToken, "Content-Type") == 0) {
             szToken = strtok(NULL, ": ");
             strcpy(structHttpResponse->szContentType, szToken);
-        }
-        else if(strcmp(szToken, "Content-Length")  == 0) {
+        } else if (strcmp(szToken, "Content-Length") == 0) {
             szToken = strtok(NULL, ": ");
             structHttpResponse->iContentLength = atoi(szToken);
         }
@@ -72,8 +217,7 @@ int ReadLine(int sockFd, char *szLineBuffer) {
         if (m >= 0) {
             if (*szReceivedMessageBuffer == '\n') {
                 break;
-            }
-            else if (*szReceivedMessageBuffer != '\r') {
+            } else if (*szReceivedMessageBuffer != '\r') {
                 strncat(szLineBuffer, szReceivedMessageBuffer, 1);
             }
             // strncat legger til \0
@@ -81,33 +225,4 @@ int ReadLine(int sockFd, char *szLineBuffer) {
         }
     }
     free(szReceivedMessageBuffer);
-}
-
-/* The function takes in a request line and returns the file/path to the szFileName pointer
- * The requested path / file resides in the middle of the request line with space as a delimiter. */
-int ParseFileRequest(char *szReqLine, FILE_REQ *structFilReq) {
-    char *szToken;
-    szToken = strtok(szReqLine, " ");
-    szToken = strtok(NULL, " ");
-    if (szToken == NULL) {
-        printf("ERROR: Unexpected format\n");
-        return ERROR;
-    }
-    /* appending . so that it will be "./filename" (current folder). */
-    if (strlen(szToken) > 255) {
-        printf("ERROR: Filename too long. Path and name must be less than 255 characters\n");
-        return ERROR;
-    }
-    strcpy(structFilReq->szFilePath, ".");
-    strcat(structFilReq->szFilePath, szToken);
-
-    if (!(structFilReq->szFileExt = GetFileExtension(structFilReq->szFilePath))) {
-        return ERROR;
-    }
-
-    return OK;
-}
-
-int GetFile(char *szFilePath, char *szFileBuffer) {
-
 }

@@ -1,7 +1,7 @@
 #ifndef C_PROG_HTTP_UTILS_H
 #define C_PROG_HTTP_UTILS_H
 
-#define PORT 80
+#define PORT 8080
 #define OK 1
 #define ERROR 0
 #define TRUE 1
@@ -27,19 +27,25 @@ struct HTTP_RESPONSE {
 struct HTTP_REQUEST_HEADERS {
     int iStatusCode;
     int iContentLength;
-    char szFilePath[256];
-    char szVersion[64];
     char szContentType[64];
     char *szPayload;
 };
 
-typedef struct _FILE_REQ {
+typedef struct _HTTP_REQUEST {
     char szFilePath[256];
+    char szVersion[24];
+    char szMethod[64];
     enum FILE_TYPE szFileExt;
-} FILE_REQ;
+    struct HTTP_REQUEST_HEADERS *structHeaders;
+} HTTP_REQUEST;
 
+static int ParseRequestLine(char *szRequestLine, HTTP_REQUEST *structRequest);
 
-int WriteFileToSocket(FILE *fdFile, int sockFd, long iFileSize);
+int ParseRequestHeaders(int sockFd, HTTP_REQUEST *structRequest);
+
+int WriteFileToSocket(FILE *fdFile, int *sockFd, long iFileSize);
+
+int AcceptConnection(int serverSockFd);
 
 int BindAndListen();
 
@@ -47,7 +53,6 @@ struct URL *ParseURL(char *szUrl);
 
 int ReadLine(int sockFd, char *szLineBuffer);
 
-int ParseFileRequest(char *szReqLine, FILE_REQ *structFileReq);
 
 int SplitHeaders(char *szLineBuffer, struct HTTP_RESPONSE *structHttpResponse, int sockFd);
 

@@ -5,109 +5,106 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
-
+#include <signal.h>
 /* Custom includes */
 #include "./include/server.h"
 #include "./include/http_utils.h"
 
+int iRunning = 1;
+int sockFd;
+
+void intHandler() {
+    printf("\nClosing server socket\n");
+    iRunning = 0;
+    close(sockFd);
+    exit(0);
+}
+
 int main(int iArgC, char *pszArgV[]) {
+    signal(SIGINT, intHandler);
+
+    struct sockaddr_in cli_addr;
+    socklen_t clilen = sizeof(cli_addr);
     char *szRequestLine;
     char *szFileReadOption;
     FILE_REQ *structFileReq;
-    struct sockaddr_in cli_addr;
-    char buffer[1024];
-    const char *response = "HTTP/1.1 200 OK\r\n\r\n<html><body><h1>Hello, world!</h1></body></html>\r\n";
-    int sockFd;
 
 
     if ((sockFd = BindAndListen()) > -1) {
         // accept an incoming connection
-        socklen_t clilen = sizeof(cli_addr);
-        int sockClientFd = accept(sockFd, (struct sockaddr *) &cli_addr, &clilen);
+        while(iRunning) {
+            const char *response = "HTTP/1.1 200 OK\r\n\r\n<html><body><h1>Hello, world!</h1></body></html>\r\n";
+            int sockClientFd = accept(sockFd, (struct sockaddr *) &cli_addr, &clilen);
 
-        if (sockClientFd > -1) {
+
+//
+//
+//
+//
             szRequestLine = (char *) malloc(1024 * sizeof(char));
-            szFileReadOption = malloc(sizeof(char) * 3);
-            structFileReq = (FILE_REQ *) malloc(sizeof(FILE_REQ));
+            szFileReadOption = (char *) malloc(sizeof(char) * 3);
+            structRequest = (HTTP_REQUEST *) malloc(sizeof(FILE_REQ));
             long lFileSize;
-
-            memset(buffer, 0, 1024);
             bzero(szRequestLine, 1024);
             bzero(szFileReadOption, 3);
+            /* TODO: Les hele jævla requesten */
 
-            // read the incoming request
-            ReadLine(sockClientFd, szRequestLine);
-            printf("RequestLine %s\n", szRequestLine);
-            ParseFileRequest(szRequestLine, structFileReq);
-            printf("FileName %s\n", structFileReq->szFilePath);
-            // Get the file extension
-
-            /* Check if we got a supported text format, otherwise read the file as binary */
-
-            bzero(szFileReadOption, 3);
-            if (structFileReq->szFileExt == HTML || structFileReq->szFileExt == TXT || structFileReq->szFileExt == C ||
-                structFileReq->szFileExt == H) {
-                strcpy(szFileReadOption, "r");
-            } else {
-                strcpy(szFileReadOption, "rb");
-            }
-
-            FILE *fdFile = fopen(structFileReq->szFilePath, szFileReadOption);
-
-            if (fdFile != NULL) {
-                printf("Found the file: %s\n", structFileReq->szFilePath);
-                fseek(fdFile, 0L, SEEK_END);
-                lFileSize = ftell(fdFile);
-                fseek(fdFile, 0L, SEEK_SET);
-                WriteFileToSocket(fdFile, sockClientFd, lFileSize);
-
-                // close the socket
-                fclose(fdFile);
-            } else {
-                /* Write error message */
-                //close(sockClientFd);
-            }
-        } else {
-            printf("ERROR on accept\n");
-            return 1;
-        }
-       // close(sockFd);
-        return 0;
-    }
-}
-
-int WriteFileToSocket(FILE *fdFile, int sockFd, long iFileSize) {
-    /* Size of an Ethernet frame */
-    unsigned char byFileBuffer[iFileSize];
-    int iBytesRead;
-    const char *responseHeader = "HTTP/1.1 200 OK\r\n\r\n";
-    const char *response = "HTTP/1.1 200 OK\r\n\r\n<html><body><h1>Hello, world!</h1></body></html>\r\n";
-
-    iBytesRead = fread(byFileBuffer, 1, iFileSize, fdFile);
-
-    write(sockFd, response, strlen(response));
-//    write(sockFd, responseHeader, strlen(responseHeader));
-//    write(sockFd, byFileBuffer, iBytesRead);
-
-//    while (!feof(fdFile)) {
-//        iBytesRead = fread(byFileBuffer, 1, 1500, fdFile);
+            printf("Got called!\n");
+            send(sockClientFd, response, strlen(response), 0);
 //
-//        // Send 500 internal server error or something
-//        if (ferror(fdFile)) {
-//            printf("Error reading file\n");
-//            fclose(fdFile);
-//            close(sockFd);
-//            break;
-//        }
-//        if (write(sockFd, byFileBuffer, iBytesRead) < 0) {
-//            printf("Error writing to socket\n");
-//            break;
-//        }
-//    }
 
+//
+//            printf("Got called!\n");
+//            send(sockClientFd, response, strlen(response), 0);
+//            // read the incoming request
+//            ReadLine(sockClientFd, szRequestLine);
+//            printf("RequestLine %s\n", szRequestLine);
+//            ParseFileRequest(szRequestLine, structFileReq);
+//            printf("FileName %s\n", structFileReq->szFilePath);
+////            // Get the file extension
+////
+////            /* Check if we got a supported text format, otherwise read the file as binary */
+////
+//            if (structFileReq->szFileExt == HTML || structFileReq->szFileExt == TXT || structFileReq->szFileExt == C ||
+//                structFileReq->szFileExt == H) {
+//                strcpy(szFileReadOption, "r");
+//            } else {
+//                strcpy(szFileReadOption, "rb");
+//            }
+
+
+
+//            if (fdFile != NULL) {
+//                printf("Found the file: %s\n", structFileReq->szFilePath);
+//                fseek(fdFile, 0L, SEEK_END);
+//                lFileSize = ftell(fdFile);
+//                fseek(fdFile, 0L, SEEK_SET);
+//                //WriteFileToSocket(fdFile, &sockClientFd, lFileSize);
+//
+//
+//                int iBytesRead;
+//                const char *responseHeader = "HTTP/1.1 200 OK\r\n\r\n";
+//                const char *response = "HTTP/1.1 200 OK\r\n\r\n<html><body><h1>Hello, world!</h1></body></html>\r\n";
+//
+//                //iBytesRead = fread(byFileBuffer, 1, iFileSize, fdFile);
+//                printf("Got called!\n");
+//                send(sockClientFd, response, strlen(response), 0);
+//                fclose(fdFile);
+//
+//
+//                // close the socket
+//            } else {
+//                /* Write error message */
+//            }
+            close(sockClientFd);
+        }
+    }
+    printf("Exiting...\n");
+    return 0;
 }
 
 int BindAndListen() {
+    struct sockaddr_in saAddr;
     int sockFd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockFd < 0) {
         perror("ERROR opening socket");
@@ -115,11 +112,10 @@ int BindAndListen() {
     }
 
     // bind the socket to a port
-    struct sockaddr_in saAddr;
     memset(&saAddr, 0, sizeof(saAddr));
     saAddr.sin_family = AF_INET;
     saAddr.sin_addr.s_addr = INADDR_ANY;
-    saAddr.sin_port = htons(9090);
+    saAddr.sin_port = htons(PORT);
 
     if (bind(sockFd, (struct sockaddr *) &saAddr, sizeof(saAddr)) < 0) {
         printf("ERROR on binding socket\n");
