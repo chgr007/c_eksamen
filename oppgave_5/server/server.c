@@ -10,8 +10,6 @@
 #include "./include/server.h"
 #include "./include/http_utils.h"
 
-/* www.eastwillsecurity.com/pg3401/test.html */
-
 int main(int iArgC, char *pszArgV[]) {
     char *szRequestLine;
     char *szFileReadOption;
@@ -25,9 +23,9 @@ int main(int iArgC, char *pszArgV[]) {
     if ((sockFd = BindAndListen()) > -1) {
         // accept an incoming connection
         socklen_t clilen = sizeof(cli_addr);
-        int sockAcceptedFd = accept(sockFd, (struct sockaddr *) &cli_addr, &clilen);
+        int sockClientFd = accept(sockFd, (struct sockaddr *) &cli_addr, &clilen);
 
-        if (sockAcceptedFd > -1) {
+        if (sockClientFd > -1) {
             szRequestLine = (char *) malloc(1024 * sizeof(char));
             szFileReadOption = malloc(sizeof(char) * 3);
             structFileReq = (FILE_REQ *) malloc(sizeof(FILE_REQ));
@@ -38,7 +36,7 @@ int main(int iArgC, char *pszArgV[]) {
             bzero(szFileReadOption, 3);
 
             // read the incoming request
-            ReadLine(sockAcceptedFd, szRequestLine);
+            ReadLine(sockClientFd, szRequestLine);
             printf("RequestLine %s\n", szRequestLine);
             ParseFileRequest(szRequestLine, structFileReq);
             printf("FileName %s\n", structFileReq->szFilePath);
@@ -46,7 +44,7 @@ int main(int iArgC, char *pszArgV[]) {
 
             /* Check if we got a supported text format, otherwise read the file as binary */
 
-            bzero(szFileReadOption, 2);
+            bzero(szFileReadOption, 3);
             if (structFileReq->szFileExt == HTML || structFileReq->szFileExt == TXT || structFileReq->szFileExt == C ||
                 structFileReq->szFileExt == H) {
                 strcpy(szFileReadOption, "r");
@@ -61,20 +59,19 @@ int main(int iArgC, char *pszArgV[]) {
                 fseek(fdFile, 0L, SEEK_END);
                 lFileSize = ftell(fdFile);
                 fseek(fdFile, 0L, SEEK_SET);
-                WriteFileToSocket(fdFile, sockAcceptedFd, lFileSize);
+                WriteFileToSocket(fdFile, sockClientFd, lFileSize);
 
                 // close the socket
                 fclose(fdFile);
             } else {
-                printf("ERROR on accept\n");
-                return 1;
+                /* Write error message */
+                //close(sockClientFd);
             }
-            if (close(sockAcceptedFd) < 0 ) {
-                printf("Waiting for socket to close\n");
-            } else
-                printf("Socket closed\n");
+        } else {
+            printf("ERROR on accept\n");
+            return 1;
         }
-        close(sockFd);
+       // close(sockFd);
         return 0;
     }
 }
@@ -92,21 +89,21 @@ int WriteFileToSocket(FILE *fdFile, int sockFd, long iFileSize) {
 //    write(sockFd, responseHeader, strlen(responseHeader));
 //    write(sockFd, byFileBuffer, iBytesRead);
 
-    while (!feof(fdFile)) {
-        iBytesRead = fread(byFileBuffer, 1, 1500, fdFile);
-
-        // Send 500 internal server error or something
-        if (ferror(fdFile)) {
-            printf("Error reading file\n");
+//    while (!feof(fdFile)) {
+//        iBytesRead = fread(byFileBuffer, 1, 1500, fdFile);
+//
+//        // Send 500 internal server error or something
+//        if (ferror(fdFile)) {
+//            printf("Error reading file\n");
 //            fclose(fdFile);
 //            close(sockFd);
-            break;
-        }
-        if (write(sockFd, byFileBuffer, iBytesRead) < 0) {
-            printf("Error writing to socket\n");
-            break;
-        }
-    }
+//            break;
+//        }
+//        if (write(sockFd, byFileBuffer, iBytesRead) < 0) {
+//            printf("Error writing to socket\n");
+//            break;
+//        }
+//    }
 
 }
 
@@ -122,7 +119,7 @@ int BindAndListen() {
     memset(&saAddr, 0, sizeof(saAddr));
     saAddr.sin_family = AF_INET;
     saAddr.sin_addr.s_addr = INADDR_ANY;
-    saAddr.sin_port = htons(8080);
+    saAddr.sin_port = htons(9090);
 
     if (bind(sockFd, (struct sockaddr *) &saAddr, sizeof(saAddr)) < 0) {
         printf("ERROR on binding socket\n");
