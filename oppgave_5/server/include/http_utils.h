@@ -6,6 +6,14 @@
 #define ERROR 0
 #define TRUE 1
 
+enum FILE_TYPE {
+    HTML,
+    TXT,
+    C,
+    H,
+    O
+};
+
 struct HTTP_RESPONSE {
     int iStatusCode;
     int iContentLength;
@@ -25,26 +33,24 @@ struct HTTP_REQUEST_HEADERS {
     char *szPayload;
 };
 
-struct URL {
-    char szHost[32];
-    char szPath[512];
-    char szProtocol[8];
-};
+typedef struct _FILE_REQ {
+    char szFilePath[256];
+    enum FILE_TYPE szFileExt;
+} FILE_REQ;
 
-enum FILE_TYPE {
-    HTML,
-    TXT,
-    C,
-    H,
-    O
-};
 
-struct URL* ParseURL(char *szUrl);
-int ReadLine(int sockFd,char *szLineBuffer);
-int SendMessage(int sockFd, struct URL *structUrl);
+int BindAndListen();
+
+struct URL *ParseURL(char *szUrl);
+
+int ReadLine(int sockFd, char *szLineBuffer);
+
+int ParseFileRequest(char *szReqLine, FILE_REQ *structFileReq);
+
 int SplitHeaders(char *szLineBuffer, struct HTTP_RESPONSE *structHttpResponse, int sockFd);
-struct HTTP_RESPONSE* GetHeaders(int sockFd);
-int GetPayload(struct HTTP_RESPONSE *structHttpResponse, int sockFd);
-int GetRequestedFile(char *szReqLine, char *szFileName);
+
+int GetFile(char *szFilePath, char *szFileBuffer);
+
 int GetFileExtension(char *szFileName);
+
 #endif //C_PROG_HTTP_UTILS_H

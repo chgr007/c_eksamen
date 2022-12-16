@@ -90,20 +90,6 @@ struct HTTP_RESPONSE* GetHeaders(int sockFd) {
     return structHttpResponse;
 }
 
-int GetPayload(struct HTTP_RESPONSE *structHttpResponse, int sockFd) {
-    int iContentLength = structHttpResponse->iContentLength;
-    if (iContentLength <= 0) {
-        printf("ERROR: Unexpected length on payload: %d\n", iContentLength);
-        return ERROR;
-    }
-    structHttpResponse->szPayload = (char *) malloc(sizeof(char) * iContentLength);
-    int m = recv(sockFd, structHttpResponse->szPayload, iContentLength, MSG_DONTWAIT);
-    if (m < 0) {
-        printf("ERROR: fetching payload\n");
-        return ERROR;
-    }
-    return OK;
-}
 
 /* Gets the header fields value and sets the HTTP_RESPONSE pointers fields accordingly */
 int SplitHeaders(char *szLineBuffer, struct HTTP_RESPONSE *structHttpResponse, int sockFd) {
@@ -156,7 +142,7 @@ int ReadLine(int sockFd, char *szLineBuffer) {
 
 /* The function takes in a request line and returns the file/path to the szFileName pointer
  * The requested path / file resides in the middle of the request line with space as a delimiter. */
-int GetRequestedFile(char *szReqLine, char *szFileName) {
+int ParseFileRequest(char *szReqLine, FILE_REQ *structFilReq) {
     char *szToken;
     szToken = strtok(szReqLine, " ");
     szToken = strtok(NULL, " ");
@@ -164,8 +150,21 @@ int GetRequestedFile(char *szReqLine, char *szFileName) {
         printf("ERROR: Unexpected format\n");
         return ERROR;
     }
-    /* appending . so that it will be "./filename (current folder). Could potentially be a heavy security risk to not do so "*/
-    strcpy(szFileName, ".");
-    strcat(szFileName, szToken);
+    /* appending . so that it will be "./filename" (current folder). */
+    if (strlen(szToken) > 255) {
+        printf("ERROR: Filename too long. Path and name must be less than 255 characters\n");
+        return ERROR;
+    }
+    strcpy(structFilReq->szFilePath, ".");
+    strcat(structFilReq->szFilePath, szToken);
+
+    if (!(structFilReq->szFileExt = GetFileExtension(structFilReq->szFilePath))) {
+        return ERROR;
+    }
+
     return OK;
+}
+
+int GetFile(char *szFilePath, char *szFileBuffer) {
+
 }

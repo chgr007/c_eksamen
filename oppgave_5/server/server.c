@@ -14,15 +14,71 @@
 
 int main(int iArgC, char *pszArgV[]) {
     char *szRequestLine = (char *) malloc(1024 * sizeof(char));
-    char *szFileName = (char *) malloc(1024 * sizeof(char));
+    FILE_REQ *structFileReq = (FILE_REQ *) malloc(sizeof(FILE_REQ));
+
     struct sockaddr_in cli_addr;
     char buffer[1024];
     const char *response = "HTTP/1.1 200 OK\r\n\r\n<html><body><h1>Hello, world!</h1></body></html>\r\n";
 
-    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd < 0) {
+    int sockFd;
+    if ((sockFd = BindAndListen()) > -1) {
+        // accept an incoming connection
+        socklen_t clilen = sizeof(cli_addr);
+        int sockAcceptedFd = accept(sockFd, (struct sockaddr *) &cli_addr, &clilen);
+        if (sockAcceptedFd < 0) {
+            perror("ERROR on accept");
+            exit(1);
+        }
+
+        // read the incoming request
+        memset(buffer, 0, 1024);
+
+        ReadLine(sockAcceptedFd, szRequestLine);
+        printf("RequestLine %s\n", szRequestLine);
+        ParseFileRequest(szRequestLine, structFileReq);
+        printf("FileName %s\n", structFileReq->szFilePath);
+        // Get the file extension
+
+        /* Check if we got a supported text format, otherwise read the file as binary */
+        char *szFileReadOption = malloc(sizeof(char) * 3);
+
+        bzero(szFileReadOption, 2);
+        if (szFileExtension == HTML || szFileExtension == TXT || szFileExtension == C || szFileExtension == H ) {
+            strcpy(szFileReadOption, "r");
+        } else {
+            strcpy(szFileReadOption, "rb");
+        }
+
+        FILE *fdFile = fopen(szFileName, szFileReadOption);
+
+        if (fdFile != NULL) {
+            printf("Found the file: %s\n", szFileName);
+            // send a response back to the client
+            int n = write(sockAcceptedFd, response, strlen(response));
+            if (n < 0) {
+                perror("ERROR writing to socket");
+                exit(1);
+            }
+        } else {
+            printf("File not found\n");
+        }
+
+        // close the socket
+        close(sockAcceptedFd);
+        close(sockFd);
+        fclose(fdFile);
+    }
+
+
+    return 0;
+}
+
+
+int BindAndListen() {
+    int sockFd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockFd < 0) {
         perror("ERROR opening socket");
-        exit(1);
+        return sockFd;
     }
 
     // bind the socket to a port
@@ -32,62 +88,20 @@ int main(int iArgC, char *pszArgV[]) {
     saAddr.sin_addr.s_addr = INADDR_ANY;
     saAddr.sin_port = htons(8080);
 
-    if (bind(sockfd, (struct sockaddr *) &saAddr, sizeof(saAddr)) < 0) {
-        perror("ERROR on binding");
-        exit(1);
+    if (bind(sockFd, (struct sockaddr *) &saAddr, sizeof(saAddr)) < 0) {
+        printf("ERROR on binding socket\n");
+        close(sockFd);
+        return -1;
     }
 
     // listen for incoming connections
-    listen(sockfd, 5);
-
-    // accept an incoming connection
-    socklen_t clilen = sizeof(cli_addr);
-    int sockAcceptedFd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
-    if (sockAcceptedFd < 0) {
-        perror("ERROR on accept");
-        exit(1);
+    if(listen(sockFd, 5) < 0) {
+        printf("ERROR on listening\n");
+        close(sockFd);
+        return -1;
     }
 
-    // read the incoming request
-    memset(buffer, 0, 1024);
-//    int n = read(sockAcceptedFd, buffer, 1023);
-//    if (n < 0)
-//    {
-//        perror("ERROR reading from socket");
-//        exit(1);
-//    }
-
-
-
-    ReadLine(sockAcceptedFd, szRequestLine);
-    printf("RequestLine %s\n", szRequestLine);
-    GetRequestedFile(szRequestLine, szFileName);
-    printf("FileName %s\n", szFileName);
-    // Get the file extension
-    enum FILE_TYPE szFileExtension = GetFileExtension(szFileName);
-
-    // if (szFileExtension == HTML || TXT || C || H ) do text stuff
-    // else do binary stuff
-
-    FILE *fdFile = fopen(szFileName, "r");
-
-    if (fdFile != NULL) {
-        printf("Found the file: %s\n", szFileName);
-    } else {
-        printf("File not found\n");
-    }
-    // send a response back to the client
-    int n = write(sockAcceptedFd, response, strlen(response));
-    if (n < 0) {
-        perror("ERROR writing to socket");
-        exit(1);
-    }
-
-    // close the socket
-    close(sockAcceptedFd);
-    close(sockfd);
-    fclose(fdFile);
-    return 0;
+    return sockFd;
 }
 
 int GetFileExtension(char *szFileName) {
