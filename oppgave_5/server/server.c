@@ -14,8 +14,8 @@ int iRunning = 1;
 int sockFd;
 
 void intHandler() {
-    printf("\nClosing server socket\n");
     iRunning = 0;
+    printf("\nClosing server socket\n");
     close(sockFd);
     exit(0);
 }
@@ -29,6 +29,7 @@ int main(int iArgC, char *pszArgV[]) {
     if ((sockFd = BindAndListen()) > -1) {
         // accept an incoming connection
         while(iRunning) {
+            /* TODO: Handle connection isntead of accept */
             AcceptConnection(sockFd);
         }
     }

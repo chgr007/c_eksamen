@@ -154,18 +154,18 @@ int AcceptConnection(int serverSockFd) {
 
 int WriteFileToSocket(FILE *fdFile, int sockClientFd, long iFileSize) {
     /* Size of an Ethernet frame */
-    unsigned char byFileBuffer[iFileSize];
+    unsigned char byFileBuffer[1500];
     int iBytesRead;
     const char *responseHeader = "HTTP/1.1 200 OK\r\n\r\n";
     //const char *response = "HTTP/1.1 200 OK\r\n\r\n<html><body><h1>Hello, world!</h1></body></html>\r\n";
-
     iBytesRead = fread(byFileBuffer, 1, iFileSize, fdFile);
     printf("Writing to socket!\n");
     //send(*sockClientFd, response, strlen(response), 0);
-//    write(sockFd, responseHeader, strlen(responseHeader));
+    write(sockClientFd, responseHeader, strlen(responseHeader));
 //    write(sockFd, byFileBuffer, iBytesRead);
 
     while (!feof(fdFile)) {
+        memset(byFileBuffer, 0, 1500);
         iBytesRead = fread(byFileBuffer, 1, 1500, fdFile);
 
         // Send 500 internal server error or something

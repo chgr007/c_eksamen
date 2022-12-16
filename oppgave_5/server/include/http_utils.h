@@ -1,7 +1,7 @@
 #ifndef C_PROG_HTTP_UTILS_H
 #define C_PROG_HTTP_UTILS_H
 
-#define PORT 8080
+#define PORT 8082
 #define OK 1
 #define ERROR 0
 #define TRUE 1
