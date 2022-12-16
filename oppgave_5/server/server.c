@@ -13,63 +13,67 @@
 /* www.eastwillsecurity.com/pg3401/test.html */
 
 int main(int iArgC, char *pszArgV[]) {
-    char *szRequestLine = (char *) malloc(1024 * sizeof(char));
-    FILE_REQ *structFileReq = (FILE_REQ *) malloc(sizeof(FILE_REQ));
-
+    char *szRequestLine;
+    char *szFileReadOption;
+    FILE_REQ *structFileReq;
     struct sockaddr_in cli_addr;
     char buffer[1024];
     const char *response = "HTTP/1.1 200 OK\r\n\r\n<html><body><h1>Hello, world!</h1></body></html>\r\n";
-
     int sockFd;
+
+
     if ((sockFd = BindAndListen()) > -1) {
         // accept an incoming connection
         socklen_t clilen = sizeof(cli_addr);
         int sockAcceptedFd = accept(sockFd, (struct sockaddr *) &cli_addr, &clilen);
-        if (sockAcceptedFd < 0) {
-            perror("ERROR on accept");
-            exit(1);
-        }
+        if (sockAcceptedFd > -1) {
+            szRequestLine = (char *) malloc(1024 * sizeof(char));
+            szFileReadOption = malloc(sizeof(char) * 3);
+            structFileReq = (FILE_REQ *) malloc(sizeof(FILE_REQ));
 
-        // read the incoming request
-        memset(buffer, 0, 1024);
+            memset(buffer, 0, 1024);
+            bzero(szRequestLine, 1024);
+            bzero(szFileReadOption, 3);
 
-        ReadLine(sockAcceptedFd, szRequestLine);
-        printf("RequestLine %s\n", szRequestLine);
-        ParseFileRequest(szRequestLine, structFileReq);
-        printf("FileName %s\n", structFileReq->szFilePath);
-        // Get the file extension
+            // read the incoming request
+            ReadLine(sockAcceptedFd, szRequestLine);
+            printf("RequestLine %s\n", szRequestLine);
+            ParseFileRequest(szRequestLine, structFileReq);
+            printf("FileName %s\n", structFileReq->szFilePath);
+            // Get the file extension
 
-        /* Check if we got a supported text format, otherwise read the file as binary */
-        char *szFileReadOption = malloc(sizeof(char) * 3);
+            /* Check if we got a supported text format, otherwise read the file as binary */
 
-        bzero(szFileReadOption, 2);
-        if (szFileExtension == HTML || szFileExtension == TXT || szFileExtension == C || szFileExtension == H ) {
-            strcpy(szFileReadOption, "r");
-        } else {
-            strcpy(szFileReadOption, "rb");
-        }
-
-        FILE *fdFile = fopen(szFileName, szFileReadOption);
-
-        if (fdFile != NULL) {
-            printf("Found the file: %s\n", szFileName);
-            // send a response back to the client
-            int n = write(sockAcceptedFd, response, strlen(response));
-            if (n < 0) {
-                perror("ERROR writing to socket");
-                exit(1);
+            bzero(szFileReadOption, 2);
+            if (structFileReq->szFileExt == HTML || structFileReq->szFileExt == TXT || structFileReq->szFileExt == C || structFileReq->szFileExt == H ) {
+                strcpy(szFileReadOption, "r");
+            } else {
+                strcpy(szFileReadOption, "rb");
             }
+
+            FILE *fdFile = fopen(structFileReq->szFilePath, szFileReadOption);
+
+            if (fdFile != NULL) {
+                printf("Found the file: %s\n", structFileReq->szFilePath);
+                // send a response back to the client
+                int n = write(sockAcceptedFd, response, strlen(response));
+                if (n < 0) {
+                    perror("ERROR writing to socket");
+                    exit(1);
+                }
+            } else {
+                printf("File not found\n");
+            }
+
+            // close the socket
+            close(sockAcceptedFd);
+            close(sockFd);
+            fclose(fdFile);
         } else {
-            printf("File not found\n");
+            printf("ERROR on accept\n");
+            return 1;
         }
-
-        // close the socket
-        close(sockAcceptedFd);
-        close(sockFd);
-        fclose(fdFile);
     }
-
-
     return 0;
 }
 
