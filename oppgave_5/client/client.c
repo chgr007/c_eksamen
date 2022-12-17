@@ -60,12 +60,12 @@ int main(int iArgC, char *pszArgV[]) {
         if (strcmp(structHttpResponse->szContentType, "text/html;") == 0
         || strcmp(structHttpResponse->szContentType, "text/plain;") == 0) {
             printf("Detected that the file is in textformat. Do you want to display it?\n");
-            printf("1. Yes\n");
-            printf("2. No\n");
+            printf("[1] Yes\n");
+            printf("[2] No\n");
             char iChoice[3];
             fgets(iChoice, 2, stdin);
             if (strcmp(iChoice, "1") == 0) {
-                printf("Displaying file\n");
+                printf("Displaying file:\n\n\n");
                 puts(structHttpResponse->szPayload);
             }
         }
@@ -73,6 +73,7 @@ int main(int iArgC, char *pszArgV[]) {
     }
     free(structURL);
     free(structHttpResponse);
+    printf("\n\n\n\nHasta la vista, baby!\n");
     return 0;
 }
 
