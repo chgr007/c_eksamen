@@ -114,7 +114,6 @@ int GetPayload(struct HTTP_RESPONSE *structHttpResponse, int sockFd) {
     if (totBytes != iContentLength) {
         printf("Unexpected length on payload: %d\n", totBytes);
     }
-
     if (mBytes < 0) {
         printf("ERROR: fetching payload\n");
         return ERROR;

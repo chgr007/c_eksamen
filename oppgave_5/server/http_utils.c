@@ -251,8 +251,8 @@ static int WriteFileToSocket(FILE *fdFile, int sockClientFd, long iFileSize) {
        It might not be of any use to do it this way unless I write an algorithm to send a chunk of the file with the headers
        f it buffers 1500B on the network layer then this will be out of sync
     */
-    char *byFileBuffer = malloc(sizeof (char) * 1500);
-    memset(byFileBuffer, 0, 1500);
+    char *byFileBuffer = malloc(sizeof (char) * iFileSize);
+    memset(byFileBuffer, 0, iFileSize);
     int iBytesRead;
     //const char *responseHeader = "HTTP/1.1 200 OK\r\n\r\n";
     printf("Writing to socket!\n");
@@ -266,13 +266,11 @@ static int WriteFileToSocket(FILE *fdFile, int sockClientFd, long iFileSize) {
         // Guess this would be more of a network layer thing since the http-header is already sent?
         if (ferror(fdFile)) {
             printf("Error reading file\n");
-            fclose(fdFile);
             free(byFileBuffer);
             return ERROR;
         }
         if (write(sockClientFd, byFileBuffer, iBytesRead) < 0) {
             printf("Error writing to socket\n");
-            fclose(fdFile);
             free(byFileBuffer);
             return ERROR;
         } else {
