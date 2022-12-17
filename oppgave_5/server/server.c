@@ -13,16 +13,24 @@
 int iRunning = 1;
 int sockFd;
 
-void intHandler() {
+void SIGINTHandler() {
     iRunning = 0;
     printf("\nClosing server socket\n");
     close(sockFd);
     exit(0);
 }
 
-int main(int iArgC, char *pszArgV[]) {
-    signal(SIGINT, intHandler);
+void SIGABRTHandler() {
+    iRunning = 0;
+    printf("\nERROR!\n");
+    close(sockFd);
+    exit(1);
+}
 
+int main(int iArgC, char *pszArgV[]) {
+    signal(SIGINT, SIGINTHandler);
+    signal(SIGABRT, SIGABRTHandler);
+    printf("Starting server on port: %d\nCTRL+C to quit\n", PORT);
     struct sockaddr_in cli_addr;
     socklen_t clilen = sizeof(cli_addr);
 

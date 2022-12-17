@@ -14,16 +14,22 @@ int ParseRequestHeaders(int sockFd, HTTP_REQUEST *structRequest) {
     char *szReqLine = (char *) malloc(sizeof(char) * 2048);
     /* Get the first line  */
     ReadLine(sockFd, szReqLine);
-    ParseRequestLine(szReqLine, structRequest);
+
+    if (!ParseRequestLine(szReqLine, structRequest)) {
+        free(szReqLine);
+        return ERROR;
+    }
+
     structRequest->szFileExt = GetFileExtension(structRequest->szFilePath);
     // print the fileExt
     printf("File extension: %d\n", structRequest->szFileExt);
     free(szReqLine);
 
     if (SplitHeaders(structRequest, sockFd) != OK) {
-        return -1;
+        return ERROR;
     }
 
+    return OK;
 }
 
 
@@ -31,7 +37,7 @@ int GetFileExtension(char *szFileName) {
     char szTmp[256];
 
     if (szFileName == NULL || strlen(szFileName) == 0) {
-        return ERROR;
+        return -1;
     }
 
     strcpy(szTmp, szFileName);
@@ -40,7 +46,7 @@ int GetFileExtension(char *szFileName) {
     strtok(NULL, ".");
 
     if (szTok == NULL) {
-        return ERROR;
+        return UNKNOWN;
     }
 
     if (strcmp(szTok, "html") == 0) {
@@ -82,7 +88,8 @@ static int ParseRequestLine(char *szRequestLine, HTTP_REQUEST *structReq) {
     strcpy(structReq->szFilePath, ".");
     strcat(structReq->szFilePath, szToken);
 
-    if (!(structReq->szFileExt = GetFileExtension(structReq->szFilePath))) {
+    if ((structReq->szFileExt = GetFileExtension(structReq->szFilePath)) == -1) {
+        printf("ERROR: File extension not supported\n");
         return ERROR;
     }
 
@@ -110,14 +117,23 @@ int AcceptConnection(int serverSockFd) {
 
         bzero(szRequestLine, 1024);
         bzero(szFileReadOption, 3);
-
-        ParseRequestHeaders(sockClientFd, structReq);
-        // Get the file extension
+        memset(structReq, 0, sizeof(HTTP_REQUEST));
+        if (!(ParseRequestHeaders(sockClientFd, structReq))) {
+            printf("ERROR: Could not parse request headers\n");
+            close(sockClientFd);
+            free(szRequestLine);
+            free(szFileReadOption);
+            free(structReq);
+            return ERROR;
+        }
 
         printf("Method: %s\n", structReq->szMethod);
         if (strcmp(structReq->szMethod, "GET") != 0) {
             printf("ERROR: Method not supported\n");
             close(sockClientFd);
+            free(szRequestLine);
+            free(szFileReadOption);
+            free(structReq);
             return ERROR;
         }
         /* Check if we got a supported text format, otherwise read the file as binary */
@@ -137,8 +153,9 @@ int AcceptConnection(int serverSockFd) {
             fseek(fdFile, 0L, SEEK_END);
             lFileSize = ftell(fdFile);
             fseek(fdFile, 0L, SEEK_SET);
-            WriteFileToSocket(fdFile, sockClientFd, lFileSize);
+            printf("File size: %ld\n", lFileSize);
 
+            WriteFileToSocket(fdFile, sockClientFd, lFileSize);
             // close the socket
             fclose(fdFile);
         } else {
@@ -148,39 +165,50 @@ int AcceptConnection(int serverSockFd) {
         printf("ERROR on accept\n");
         return 1;
     }
+    free(szRequestLine);
+    free(szFileReadOption);
+    free(structReq);
     close(sockClientFd);
 }
 
 
 int WriteFileToSocket(FILE *fdFile, int sockClientFd, long iFileSize) {
-    /* Size of an Ethernet frame */
-    unsigned char byFileBuffer[1500];
+    /* Size of an Ethernet frame
+       It might not be of any use to do it this way unless I write an algorithm to send a chunk of the file with the headers
+       f it buffers 1500B on the network layer then this will be out of sync
+    */
+    char *byFileBuffer = malloc(sizeof (char) * 1500);
+    memset(byFileBuffer, 0, 1500);
     int iBytesRead;
     const char *responseHeader = "HTTP/1.1 200 OK\r\n\r\n";
     //const char *response = "HTTP/1.1 200 OK\r\n\r\n<html><body><h1>Hello, world!</h1></body></html>\r\n";
-    iBytesRead = fread(byFileBuffer, 1, iFileSize, fdFile);
     printf("Writing to socket!\n");
     //send(*sockClientFd, response, strlen(response), 0);
     write(sockClientFd, responseHeader, strlen(responseHeader));
 //    write(sockFd, byFileBuffer, iBytesRead);
 
     while (!feof(fdFile)) {
-        memset(byFileBuffer, 0, 1500);
-        iBytesRead = fread(byFileBuffer, 1, 1500, fdFile);
 
-        // Send 500 internal server error or something
+        iBytesRead = fread(byFileBuffer, 1, 1500, fdFile);
+        printf("Bytes read: %d\n", iBytesRead);
+        // 500 internal server error or something. Got to read up on how to gracefully exit during transmission.
+        // Guess this would be more of a network layer thing since the http-header is already sent?
         if (ferror(fdFile)) {
             printf("Error reading file\n");
             fclose(fdFile);
-            close(sockClientFd);
-            break;
+            return ERROR;
         }
         if (write(sockClientFd, byFileBuffer, iBytesRead) < 0) {
             printf("Error writing to socket\n");
-            break;
+            fclose(fdFile);
+            return ERROR;
+        } else {
+            printf("Wrote to socket\n");
         }
     }
 
+    printf("Done writing to socket!\n");
+    return OK;
 }
 
 
@@ -206,6 +234,7 @@ int SplitHeaders(HTTP_REQUEST *structHttpRequest, int sockFd) {
         ReadLine(sockFd, szLineBuffer);
     }
     free(szLineBuffer);
+    return OK;
 }
 
 /* Reads one line of the response and updates a buffer */

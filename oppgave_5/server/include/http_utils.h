@@ -1,7 +1,7 @@
 #ifndef C_PROG_HTTP_UTILS_H
 #define C_PROG_HTTP_UTILS_H
 
-#define PORT 8082
+#define PORT 8080
 #define OK 1
 #define ERROR 0
 #define TRUE 1
@@ -11,7 +11,8 @@ enum FILE_TYPE {
     TXT,
     C,
     H,
-    O
+    O,
+    UNKNOWN,
 };
 
 struct HTTP_RESPONSE {
@@ -28,13 +29,13 @@ struct HTTP_REQUEST_HEADERS {
     int iStatusCode;
     int iContentLength;
     char szContentType[64];
-    char *szPayload;
 };
 
 typedef struct _HTTP_REQUEST {
     char szFilePath[256];
     char szVersion[24];
     char szMethod[64];
+    char *szPayload;
     enum FILE_TYPE szFileExt;
     struct HTTP_REQUEST_HEADERS *structHeaders;
 } HTTP_REQUEST;
