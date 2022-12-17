@@ -20,7 +20,7 @@ enum FILE_TYPE {
 
 typedef struct _HTTP_RESPONSE {
     int iStatusCode;
-    char szContentLength[56];
+    char szContentLength[128];
     char szContentType[56];
     char szStatusMessage[56];
     char szVersion[56];
@@ -65,5 +65,5 @@ static int GetFile(char *szFilePath, char *szFileBuffer);
 
 static int GetFileExtension(char *szFileName);
 
-static int SetResponseHeaders(HTTP_REQUEST *structRequest, HTTP_RESPONSE *structResponse, int iFileSize);
+static int SetResponseHeaders(HTTP_REQUEST *structRequest, HTTP_RESPONSE *structResponse, long iFileSize);
 #endif //C_PROG_HTTP_UTILS_H

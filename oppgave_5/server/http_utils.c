@@ -5,11 +5,12 @@
 #include <unistd.h>
 #include "include/http_utils.h"
 
+/* Setting content type according to file format */
 static int SetResponseContentType(HTTP_REQUEST *structRequest, HTTP_RESPONSE *structResponse) {
-    char szTextPlain[] = "text/plain; charset=UTF-8";
+    char szTextPlain[] = "Content-Type: text/plain; charset=UTF-8\r\n";
 
     if (structRequest->szFileExt == HTML) {
-        strcpy(structResponse->szContentType, "text/html; charset=UTF-8");
+        strcpy(structResponse->szContentType, "Content-Type: text/html; charset=UTF-8\r\n");
     } else if (structRequest->szFileExt == TXT) {
         strcpy(structResponse->szContentType, szTextPlain);
     } else if (structRequest->szFileExt == C) {
@@ -19,15 +20,16 @@ static int SetResponseContentType(HTTP_REQUEST *structRequest, HTTP_RESPONSE *st
     } else if (structRequest->szFileExt == O) {
         strcpy(structResponse->szContentType, szTextPlain);
     } else if (structRequest->szFileExt == JPG) {
-        strcpy(structResponse->szContentType, "image/jpeg");
+        strcpy(structResponse->szContentType, "Content-Type: image/jpeg\r\n");
     } else {
-        strcpy(structResponse->szContentType, "application/octet-stream");
+        strcpy(structResponse->szContentType, "Content-Type: application/octet-stream\r\n");
     }
     return OK;
 }
 
 static int ParseRequestHeaders(int sockFd, HTTP_REQUEST *structRequest) {
     char *szReqLine = (char *) malloc(sizeof(char) * 2048);
+    bzero(szReqLine, 2048);
     /* Get the first line  */
     ReadLine(sockFd, szReqLine);
 
@@ -44,7 +46,7 @@ static int ParseRequestHeaders(int sockFd, HTTP_REQUEST *structRequest) {
     // print the fileExt
     printf("File extension: %d\n", structRequest->szFileExt);
     free(szReqLine);
-
+    szReqLine = NULL;
     if (SplitHeaders(structRequest, sockFd) != OK) {
         return ERROR;
     }
@@ -136,12 +138,20 @@ static int ParseRequestLine(char *szRequestLine, HTTP_REQUEST *structReq) {
  * Set the header fields
  * in the HTTP_RESPONSE struct
  */
-static int SetResponseHeaders(HTTP_REQUEST *structRequest, HTTP_RESPONSE *structResponse, int iFileSize) {
+static int SetResponseHeaders(HTTP_REQUEST *structRequest, HTTP_RESPONSE *structResponse, long iFileSize) {
+    /* Weird bug in sprintf when using \r\n */
+    char szContentLength[256];
+    bzero(szContentLength, 256);
+    sprintf(szContentLength, "Content-Length: %ld", iFileSize);
+    strcat(szContentLength, "\r\n");
+
+    strcpy(structResponse->szContentLength, szContentLength);
     strcpy(structResponse->szStatusMessage, "HTTP/1.1 200 OK\r\n");
     strcpy(structResponse->szVersion, "1.1");
     strcpy(structResponse->szServer, SERVER);
-    sprintf(structResponse->szContentLength, "Content-Length: %d\r\n", iFileSize);
     SetResponseContentType(structRequest, structResponse);
+
+    printf("Content length: %s\n", structResponse->szContentLength);
 }
 
 static int SendResponseHeaders(int sockFd, HTTP_RESPONSE *structResponse) {
@@ -206,18 +216,25 @@ int HandleConnection(int sockClientFd) {
 
         if (fdFile != NULL) {
             HTTP_RESPONSE *structResp = (HTTP_RESPONSE *) malloc(sizeof(HTTP_RESPONSE));
+            memset(structResp, 0, sizeof(HTTP_RESPONSE));
             printf("Found the file: %s\n", structReq->szFilePath);
             fseek(fdFile, 0L, SEEK_END);
             lFileSize = ftell(fdFile);
             fseek(fdFile, 0L, SEEK_SET);
             printf("File size: %ld\n", lFileSize);
-
+            printf("File size content type: %s\n", structResp->szContentLength);
             SetResponseHeaders(structReq, structResp, lFileSize);
-            WriteFileToSocket(fdFile, sockClientFd, lFileSize);
+            if (SendResponseHeaders(sockClientFd, structResp)) {
+                WriteFileToSocket(fdFile, sockClientFd, lFileSize);
+            } else {
+                printf("ERROR: Could not send response headers\n");
+            }
             // close the socket
             fclose(fdFile);
+            free(structResp);
+            structResp = NULL;
         } else {
-            /* Write error message */
+            printf("ERROR: Could not open file\n");
         }
     } else {
         printf("ERROR on accept\n");
@@ -237,9 +254,9 @@ static int WriteFileToSocket(FILE *fdFile, int sockClientFd, long iFileSize) {
     char *byFileBuffer = malloc(sizeof (char) * 1500);
     memset(byFileBuffer, 0, 1500);
     int iBytesRead;
-    const char *responseHeader = "HTTP/1.1 200 OK\r\n\r\n";
+    //const char *responseHeader = "HTTP/1.1 200 OK\r\n\r\n";
     printf("Writing to socket!\n");
-    write(sockClientFd, responseHeader, strlen(responseHeader));
+    //write(sockClientFd, responseHeader, strlen(responseHeader));
 
     while (!feof(fdFile)) {
 
@@ -286,7 +303,7 @@ static int SplitHeaders(HTTP_REQUEST *structHttpRequest, int sockFd) {
             szToken = strtok(NULL, ": ");
             structHttpRequest->structHeaders->iContentLength = atoi(szToken);
         }
-        bzero(szLineBuffer, 256);
+        bzero(szLineBuffer, 1024);
         ReadLine(sockFd, szLineBuffer);
     }
     free(szLineBuffer);
