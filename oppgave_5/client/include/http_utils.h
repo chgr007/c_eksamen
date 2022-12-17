@@ -8,7 +8,7 @@
 
 struct HTTP_RESPONSE {
     int iStatusCode;
-    int iContentLength;
+    long iContentLength;
     char szStatusMessage[56];
     char szVersion[56];
     char szContentType[56];

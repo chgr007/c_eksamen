@@ -4,7 +4,7 @@
 #include <netdb.h>
 #include <string.h>
 #include <stdlib.h>
-
+#include <unistd.h>
 /* Custom includes */
 #include "./include/client.h"
 #include "./include/http_utils.h"
@@ -33,7 +33,6 @@ int main(int iArgC, char *pszArgV[]) {
     strcpy(structURL->szProtocol, "HTTP/1.1");
 
     int iConnectionStatus = ConnectToSocket(structURL->szHost, sockFd);
-
     if (iConnectionStatus != OK) {
         printf("ERROR connecting to socket\n");
         return 0;
@@ -42,23 +41,27 @@ int main(int iArgC, char *pszArgV[]) {
     int iRequestStatus = SendMessage(sockFd, structURL);
     if (iRequestStatus != OK) {
         printf("ERROR sending message\n");
+        close(sockFd);
         return 0;
     }
-
     printf("Getting headers\n");
     struct HTTP_RESPONSE *structHttpResponse = GetHeaders(sockFd);
     if(structHttpResponse == NULL) {
         printf("ERROR getting headers\n");
+        free(structHttpResponse);
+        close(sockFd);
         return 0;
     }
     printf("Getting payload\n");
     int iNumBytes = GetPayload(structHttpResponse, sockFd);
+    close(sockFd);
     if (iNumBytes > 0) {
         printf("%s\n", structHttpResponse->szPayload);
         SavePayload(structHttpResponse, structURL->szPath, iNumBytes);
-        return 1;
+        free(structHttpResponse->szPayload);
     }
     free(structURL);
+    free(structHttpResponse);
     return 0;
 }
 

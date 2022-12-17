@@ -75,7 +75,7 @@ struct HTTP_RESPONSE *GetHeaders(int sockFd) {
     strcpy(structHttpResponse->szVersion, szToken);
     szToken = strtok(NULL, " ");
     structHttpResponse->iStatusCode = atoi(szToken);
-    printf("Status code: %d", structHttpResponse->iStatusCode);
+    printf("Status code: %d\n", structHttpResponse->iStatusCode);
     /* Check if the first line is formatted as expected, could be more elaborated (could use RegEx if C has support for it) */
     if (structHttpResponse->iStatusCode == 0) {
         printf("ERROR: Unexpected format\n");
@@ -92,27 +92,36 @@ struct HTTP_RESPONSE *GetHeaders(int sockFd) {
     return structHttpResponse;
 }
 
+/* There's a bug which causes segfault on larger files. I can't find it */
 int GetPayload(struct HTTP_RESPONSE *structHttpResponse, int sockFd) {
     int iContentLength = structHttpResponse->iContentLength;
     char *szPayloadBuffer = (char *) malloc(sizeof(char) * 1500);
+    memset(szPayloadBuffer, 0, 1500);
     if (iContentLength <= 0) {
         printf("ERROR: Unexpected length on payload: %d\n", iContentLength);
         return ERROR;
     }
     structHttpResponse->szPayload = (char *) malloc(sizeof(char) * iContentLength);
-
+    memset(structHttpResponse->szPayload, 0, iContentLength);
     // While there is data to read, read it
     printf("Content-length: %d\n", iContentLength);
-    int mBytes = 0, totBytes = 0;
+    long mBytes = 0, totBytes = 0;
     do {
-        mBytes = recv(sockFd, szPayloadBuffer, 1500, MSG_DONTWAIT);
-        memcpy(structHttpResponse->szPayload + totBytes, szPayloadBuffer, mBytes);
-        printf("Received %d bytes of payload\n", mBytes);
-        totBytes += mBytes;
+        mBytes = recv(sockFd, szPayloadBuffer, 1500, MSG_BATCH);
+
+        if (mBytes < 0) {
+            printf("mBytes: %ld", mBytes);
+            printf("ERROR: Error on socket\n");
+            return ERROR;
+        } else {
+            memcpy(structHttpResponse->szPayload + totBytes, szPayloadBuffer, (size_t) mBytes);
+            printf("Received %ld bytes of payload\n", mBytes);
+            totBytes += mBytes;
+        }
     } while (mBytes > 0);
 
     if (totBytes != iContentLength) {
-        printf("Unexpected length on payload: %d\n", totBytes);
+        printf("Unexpected length on payload: %ld\n", totBytes);
     }
     if (mBytes < 0) {
         printf("ERROR: fetching payload\n");
