@@ -52,10 +52,10 @@ int main(int iArgC, char *pszArgV[]) {
         return 0;
     }
     printf("Getting payload\n");
-    int iPayloadStatus = GetPayload(structHttpResponse, sockFd);
-    if (iPayloadStatus == OK) {
+    int iNumBytes = GetPayload(structHttpResponse, sockFd);
+    if (iNumBytes > 0) {
         printf("%s\n", structHttpResponse->szPayload);
-        SavePayload(structHttpResponse);
+        SavePayload(structHttpResponse, structURL->szPath, iNumBytes);
         return 1;
     }
     free(structURL);
