@@ -5,6 +5,7 @@
 #define OK 1
 #define ERROR 0
 #define TRUE 1
+#define SERVER "Server: Shaky C-Server/1.0\r\n"
 
 enum FILE_TYPE {
     HTML,
@@ -16,23 +17,14 @@ enum FILE_TYPE {
     UNKNOWN,
 };
 
-typedef struct _HTTP_RESPONSE_HEADERS {
-    char szStatusMessage[56];
-    char szVersion[56];
-    char szContentType[56];
-    char szServer[56];
-    int iContentLength;
-} HTTP_RESPONSE_HEADERS;
 
 typedef struct _HTTP_RESPONSE {
     int iStatusCode;
-    int iContentLength;
+    char szContentLength[56];
+    char szContentType[56];
     char szStatusMessage[56];
     char szVersion[56];
-    char szContentType[56];
     char szServer[56];
-    HTTP_RESPONSE_HEADERS *structHeaders;
-    char *szPayload;
 } HTTP_RESPONSE;
 
 
@@ -53,24 +45,25 @@ typedef struct _HTTP_REQUEST {
 
 static int ParseRequestLine(char *szRequestLine, HTTP_REQUEST *structRequest);
 
-int ParseRequestHeaders(int sockFd, HTTP_REQUEST *structRequest);
+static int ParseRequestHeaders(int sockFd, HTTP_REQUEST *structRequest);
 
-int WriteFileToSocket(FILE *fdFile, int sockFd, long iFileSize);
+static int WriteFileToSocket(FILE *fdFile, int sockFd, long iFileSize);
 
-int AcceptConnection(int serverSockFd);
+int HandleConnection(int sockClientFd);
 
 int BindAndListen();
 
 struct URL *ParseURL(char *szUrl);
 
-int ReadLine(int sockFd, char *szLineBuffer);
+static int ReadLine(int sockFd, char *szLineBuffer);
 
 static int *GetHeaders(int sockFd, HTTP_REQUEST *structRequest);
 
-int SplitHeaders(HTTP_REQUEST *structHttpRequest, int sockFd);
+static int SplitHeaders(HTTP_REQUEST *structHttpRequest, int sockFd);
 
-int GetFile(char *szFilePath, char *szFileBuffer);
+static int GetFile(char *szFilePath, char *szFileBuffer);
 
-int GetFileExtension(char *szFileName);
+static int GetFileExtension(char *szFileName);
 
+static int SetResponseHeaders(HTTP_REQUEST *structRequest, HTTP_RESPONSE *structResponse, int iFileSize);
 #endif //C_PROG_HTTP_UTILS_H

@@ -14,16 +14,16 @@ int iRunning = 1;
 int sockFd;
 
 void SIGINTHandler() {
-    iRunning = 0;
     printf("\nClosing server socket\n");
     close(sockFd);
+    iRunning = 0;
     exit(0);
 }
 
 void SIGABRTHandler() {
+    close(sockFd);
     iRunning = 0;
     printf("\nERROR!\n");
-    close(sockFd);
     exit(1);
 }
 
@@ -31,14 +31,15 @@ int main(int iArgC, char *pszArgV[]) {
     signal(SIGINT, SIGINTHandler);
     signal(SIGABRT, SIGABRTHandler);
     printf("Starting server on port: %d\nCTRL+C to quit\n", PORT);
-    struct sockaddr_in cli_addr;
-    socklen_t clilen = sizeof(cli_addr);
 
     if ((sockFd = BindAndListen()) > -1) {
         // accept an incoming connection
         while(iRunning) {
-            /* TODO: Handle connection isntead of accept */
-            AcceptConnection(sockFd);
+            struct sockaddr_in cli_addr;
+            socklen_t clilen = sizeof(cli_addr);
+            int sockClientFd = accept(sockFd, (struct sockaddr *) &cli_addr, &clilen);
+            HandleConnection(sockClientFd);
+            close(sockClientFd);
         }
     }
     printf("Exiting...\n");
