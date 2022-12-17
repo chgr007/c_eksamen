@@ -13,23 +13,35 @@
 int iRunning = 1;
 int sockFd;
 
-void intHandler() {
+void SIGINTHandler() {
     printf("\nClosing server socket\n");
-    iRunning = 0;
     close(sockFd);
+    iRunning = 0;
     exit(0);
 }
 
-int main(int iArgC, char *pszArgV[]) {
-    signal(SIGINT, intHandler);
+void SIGABRTHandler() {
+    close(sockFd);
+    iRunning = 0;
+    printf("\nERROR!\n");
+    exit(1);
+}
 
-    struct sockaddr_in cli_addr;
-    socklen_t clilen = sizeof(cli_addr);
+int main(int iArgC, char *pszArgV[]) {
+    signal(SIGINT, SIGINTHandler);
+    signal(SIGABRT, SIGABRTHandler);
+    printf("Starting server on port: %d\nCTRL+C to quit\n", PORT);
+    // TODO: Sjekk hva som skjer hvis man sender rare filnavn som typ ~ , . / osv.
+    // Vil ikke at man skal få utilsiktet tilgang til root. Burde håndtere dette ved tid.
 
     if ((sockFd = BindAndListen()) > -1) {
         // accept an incoming connection
         while(iRunning) {
-            AcceptConnection(sockFd);
+            struct sockaddr_in cli_addr;
+            socklen_t clilen = sizeof(cli_addr);
+            int sockClientFd = accept(sockFd, (struct sockaddr *) &cli_addr, &clilen);
+            HandleConnection(sockClientFd);
+            close(sockClientFd);
         }
     }
     printf("Exiting...\n");
@@ -65,4 +77,3 @@ int BindAndListen() {
 
     return sockFd;
 }
-

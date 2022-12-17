@@ -7,9 +7,8 @@
 
 /* Send a request to an open socket. */
 int SendMessage(int sockFd, struct URL *structUrl) {
-    char *szRequestPattern = "GET %s HTTP/1.1\r\nHost: %s\r\n\r\n";
-    char *szRequest;
-
+    char szRequestPattern[] = "GET /%s HTTP/1.1\r\nHost: %s\r\n\r\n";
+    char *szRequest = (char *) malloc(strlen(szRequestPattern) + strlen(structUrl->szPath) + strlen(structUrl->szHost));
     /* Format the request and send it */
     sprintf(szRequest, szRequestPattern, structUrl->szPath, structUrl->szHost);
     int n = send(sockFd, szRequest, strlen(szRequest), 0);
@@ -17,6 +16,8 @@ int SendMessage(int sockFd, struct URL *structUrl) {
         printf("ERROR writing to socket\n");
         return ERROR;
     }
+    printf("Request sent: %s\n", szRequest);
+    free(szRequest);
     return OK;
 }
 /*
@@ -73,6 +74,7 @@ struct HTTP_RESPONSE* GetHeaders(int sockFd) {
     strcpy(structHttpResponse->szVersion, szToken);
     szToken = strtok(NULL, " ");
     structHttpResponse->iStatusCode = atoi(szToken);
+    printf("Status code: %d", structHttpResponse->iStatusCode);
     /* Check if the first line is formatted as expected, could be more elaborated (could use RegEx if C has support for it) */
     if (structHttpResponse->iStatusCode == 0) {
         printf("ERROR: Unexpected format\n");
@@ -96,14 +98,44 @@ int GetPayload(struct HTTP_RESPONSE *structHttpResponse, int sockFd) {
         return ERROR;
     }
     structHttpResponse->szPayload = (char *) malloc(sizeof(char) * iContentLength);
-    int m = recv(sockFd, structHttpResponse->szPayload, iContentLength, MSG_DONTWAIT);
-    if (m < 0) {
+
+    // While there is data to read, read it
+    printf("Content-length: %d", iContentLength);
+    int mBytes, totBytes = 0;
+    while ((mBytes = recv(sockFd, structHttpResponse->szPayload, iContentLength, MSG_DONTWAIT)) > 0) {
+        printf("Received %d bytes of payload");
+        totBytes += mBytes;
+    }
+
+    if (totBytes != iContentLength) {
+        printf("ERROR: Unexpected length on payload: %d\n", totBytes);
+        return ERROR;
+    }
+
+    if (mBytes < 0) {
         printf("ERROR: fetching payload\n");
         return ERROR;
     }
     return OK;
 }
-
+int SavePayload(struct HTTP_RESPONSE *structHttpResponse) {
+    FILE *fp;
+    if (strcmp(structHttpResponse->szContentType, "text/html") == 0) {
+        fp = fopen("index.html", "w");
+    } else if (strcmp(structHttpResponse->szContentType, "text/plain") == 0) {
+        fp = fopen("index.txt", "w");
+    } else {
+        printf("ERROR: Unknown content type: %s", structHttpResponse->szContentType);
+        return ERROR;
+    }
+    if (fp == NULL) {
+        printf("ERROR: Could not open file for writing\n");
+        return ERROR;
+    }
+    fprintf(fp, "%s", structHttpResponse->szPayload);
+    fclose(fp);
+    return OK;
+}
 /* Gets the header fields value and sets the HTTP_RESPONSE pointers fields accordingly */
 int SplitHeaders(char *szLineBuffer, struct HTTP_RESPONSE *structHttpResponse, int sockFd) {
     char *szToken;
