@@ -96,7 +96,6 @@ struct HTTP_RESPONSE *GetHeaders(int sockFd) {
 int GetPayload(struct HTTP_RESPONSE *structHttpResponse, int sockFd) {
     int iContentLength = structHttpResponse->iContentLength;
     char *szPayloadBuffer = (char *) malloc(sizeof(char) * 1500);
-    memset(szPayloadBuffer, 0, 1500);
     if (iContentLength <= 0) {
         printf("ERROR: Unexpected length on payload: %d\n", iContentLength);
         return ERROR;
@@ -107,6 +106,7 @@ int GetPayload(struct HTTP_RESPONSE *structHttpResponse, int sockFd) {
     printf("Content-length: %d\n", iContentLength);
     long mBytes = 0, totBytes = 0;
     do {
+        memset(szPayloadBuffer, 0, 1500);
         mBytes = recv(sockFd, szPayloadBuffer, 1500, MSG_BATCH);
 
         if (mBytes < 0) {
@@ -123,10 +123,7 @@ int GetPayload(struct HTTP_RESPONSE *structHttpResponse, int sockFd) {
     if (totBytes != iContentLength) {
         printf("Unexpected length on payload: %ld\n", totBytes);
     }
-    if (mBytes < 0) {
-        printf("ERROR: fetching payload\n");
-        return ERROR;
-    }
+    free(szPayloadBuffer);
     return totBytes;
 }
 
