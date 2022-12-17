@@ -31,6 +31,8 @@ int main(int iArgC, char *pszArgV[]) {
     signal(SIGINT, SIGINTHandler);
     signal(SIGABRT, SIGABRTHandler);
     printf("Starting server on port: %d\nCTRL+C to quit\n", PORT);
+    // TODO: Sjekk hva som skjer hvis man sender rare filnavn som typ ~ , . / osv.
+    // Vil ikke at man skal få utilsiktet tilgang til root. Burde håndtere dette ved tid.
 
     if ((sockFd = BindAndListen()) > -1) {
         // accept an incoming connection

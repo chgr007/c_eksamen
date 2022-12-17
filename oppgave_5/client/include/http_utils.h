@@ -1,7 +1,7 @@
 #ifndef C_PROG_HTTP_UTILS_H
 #define C_PROG_HTTP_UTILS_H
 
-#define PORT 80
+#define PORT 8080
 #define OK 1
 #define ERROR 0
 #define TRUE 1
@@ -21,6 +21,7 @@ struct URL {
     char szPath[512];
     char szProtocol[8];
 };
+int SavePayload(struct HTTP_RESPONSE *structHttpResponse);
 struct URL* ParseURL(char *szUrl);
 int ReadLine(int sockFd,char *szLineBuffer);
 int SendMessage(int sockFd, struct URL *structUrl);
