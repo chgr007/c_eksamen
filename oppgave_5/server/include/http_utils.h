@@ -12,23 +12,34 @@ enum FILE_TYPE {
     C,
     H,
     O,
+    JPG,
     UNKNOWN,
 };
 
-struct HTTP_RESPONSE {
+typedef struct _HTTP_RESPONSE_HEADERS {
+    char szStatusMessage[56];
+    char szVersion[56];
+    char szContentType[56];
+    char szServer[56];
+    int iContentLength;
+} HTTP_RESPONSE_HEADERS;
+
+typedef struct _HTTP_RESPONSE {
     int iStatusCode;
     int iContentLength;
     char szStatusMessage[56];
     char szVersion[56];
     char szContentType[56];
     char szServer[56];
+    HTTP_RESPONSE_HEADERS *structHeaders;
     char *szPayload;
-};
+} HTTP_RESPONSE;
+
 
 struct HTTP_REQUEST_HEADERS {
     int iStatusCode;
     int iContentLength;
-    char szContentType[64];
+    char szContentType[128];
 };
 
 typedef struct _HTTP_REQUEST {

@@ -9,18 +9,54 @@
 #include <sys/types.h>
 #include "include/http_utils.h"
 
+int SetResponseContentType(HTTP_REQUEST *structRequest) {
+    char szTextPlain[] = "text/plain; charset=UTF-8";
+    printf("fileExt: %d\n", structRequest->szFileExt);
+    switch (structRequest->szFileExt) {
+        case HTML:
+            strcpy(structRequest->structHeaders->szContentType, "text/html; charset=UTF-8");
+            break;
+        case TXT:
+            strcpy(structRequest->structHeaders->szContentType, szTextPlain);
+            break;
+        case C:
+            strcpy(structRequest->structHeaders->szContentType, szTextPlain);
+            break;
+        case H:
+            strcpy(structRequest->structHeaders->szContentType, szTextPlain);
+            break;
+        case O:
+            strcpy(structRequest->structHeaders->szContentType, szTextPlain);
+            break;
+        case JPG:
+            strcpy(structRequest->structHeaders->szContentType, "image/jpeg");
+            break;
+        case UNKNOWN:
+            strcpy(structRequest->structHeaders->szContentType, szTextPlain);
+            break;
+        default:
+            strcpy(structRequest->structHeaders->szContentType, szTextPlain);
+            break;
+    }
+    printf("Set content type\n");
+    return OK;
+}
 
 int ParseRequestHeaders(int sockFd, HTTP_REQUEST *structRequest) {
     char *szReqLine = (char *) malloc(sizeof(char) * 2048);
     /* Get the first line  */
     ReadLine(sockFd, szReqLine);
 
-    if (!ParseRequestLine(szReqLine, structRequest)) {
+    if (ParseRequestLine(szReqLine, structRequest) != OK) {
+        printf("Error parsing request line\n");
         free(szReqLine);
         return ERROR;
     }
 
-    structRequest->szFileExt = GetFileExtension(structRequest->szFilePath);
+    if ((structRequest->szFileExt = GetFileExtension(structRequest->szFilePath)) == -1) {
+        free(szReqLine);
+        return ERROR;
+    }
     // print the fileExt
     printf("File extension: %d\n", structRequest->szFileExt);
     free(szReqLine);
@@ -60,7 +96,7 @@ int GetFileExtension(char *szFileName) {
     } else if (strcmp(szTok, "o") == 0) {
         return O;
     } else {
-        return ERROR;
+        return UNKNOWN;
     }
 }
 
@@ -118,6 +154,7 @@ int AcceptConnection(int serverSockFd) {
         bzero(szRequestLine, 1024);
         bzero(szFileReadOption, 3);
         memset(structReq, 0, sizeof(HTTP_REQUEST));
+        printf("Reading request line\n");
         if (!(ParseRequestHeaders(sockClientFd, structReq))) {
             printf("ERROR: Could not parse request headers\n");
             close(sockClientFd);
