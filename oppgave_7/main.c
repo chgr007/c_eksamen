@@ -5,16 +5,42 @@
 #include <regex.h>
 #define OK 1
 
-int FormatLine(char *szLineToFormat, char *pszFormattedString) {
-    int iFoundForLoop = 0;
-    int iFormattingForLoop = 0;
+int FormatLine(char *szLineToFormat, char *pszFormattedString, char *pszIterator) {
+    static int iFormattingForLoop = 0;
     char *pcLoopStart = NULL;
     int i;
     size_t ulLineSize = strlen(szLineToFormat);
+    regex_t regexLoop;
+    regmatch_t *match;
 
-    // 1. Sjekk etter løkke
-    // 2. Finn variabelnavn, verdi, og flytt de til en linje over. Ta vare på pointer
+    // 1. Sjekk etter løkke, ta vare på pointer til hvor den starter
+    // 2. Finn variabelnavn, verdi, og flytt de til en linje over.
+    // 3. Finn test statementet i løkken, og spar på det
+    // 4. Finn inkrement/dekrement, og spar på det
+    // 5. Generer while (test) { ... } og erstatt den gamle løkken med den nye
+    // 6. Sett inkrement på en ny linje rett før }
+/*
+ *
+ * typedef struct {
+    regoff_t    rm_so;  Byte offset from start of string to start of substring
+    regoff_t    rm_eo; Byte offset from start of string of the first character after the end of substring
+} regmatch_t;
+ */
 
+    printf("FormatLine: %s\n", szLineToFormat);
+    int iRegextVal;
+    iRegextVal = regcomp(&regexLoop, "for[[:space:]]*\\(", REG_EXTENDED);
+    iRegextVal = regexec(&regexLoop, szLineToFormat, 1, match, 0);
+    if (iRegextVal == 0) {
+        /* Got the pointer to the end of the */
+        pcLoopStart = &szLineToFormat + match->rm_so;
+        iFormattingForLoop = 1;
+
+        char *pzLoopCondition = (char *) malloc(sizeof (char) * 512);
+        free(pzLoopCondition);
+    }
+
+    printf("\n\niRegextVal: %d\n\n", iRegextVal);
     for (i = 0; i < ulLineSize; i++) {
         char cCurrentChar = szLineToFormat[i];
         char szCurrentChar[2];
