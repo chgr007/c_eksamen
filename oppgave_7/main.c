@@ -14,7 +14,46 @@ int FindLoopCondition(char *pszLoopStart, char *pszLoopCondition) {
 
     return OK;
 }
+/*
+ * Takes the pointer to the start of the loop as argument, and sets the
+ * Loop variable pointers. Returns 0 on ERROR.
+ *
+ * There is some pointer arithmetic going on here:
+ * 1: Find the start of the loop variables,
+ * 2: Using that pointer, find the end of the loop variables.
+ * 3: Calculate the difference in bytes to find the length of the string we want to extract
+ * 4: set pszLoopVariables if it was successful
+ * */
+int FindLoopVariables(char *pszLoopStart, char *pszLoopVariables) {
+    int iRegStartOk, iRegEndOk;
+    regex_t regexStartVariables, regexEndVariables;
+    regmatch_t matchStart, matchEnd;
+    // set this to VarStart match _END_
+    char *pcVarStart;
+    // set this to VarEnd match _START_
+    char *pcVarEnd;
+    char *szVarStartExpr = "for[[:space:]]*\\(";
+    // use the pointer to the start of variables, as a starting point.
+    // Note, loops don't have to initialize variables, so we need to check for empty at some point.
+    char *szVarEndExpr = "\\.*;";
 
+    iRegStartOk = regcomp(&regexStartVariables, szVarStartExpr, REG_EXTENDED);
+    if ((iRegStartOk = regexec(&regexStartVariables, pszLoopStart, 1, &matchStart, 0)) == 0) {
+        printf("Found start of variables\n");
+        pcVarStart = matchStart.rm_eo + pszLoopStart;
+        regfree(&regexStartVariables);
+        iRegEndOk = regcomp(&regexEndVariables, szVarEndExpr, REG_EXTENDED);
+        iRegEndOk = regexec(&regexEndVariables, pcVarStart, 1, &matchEnd, 0);
+        if (iRegEndOk == 0) {
+            printf("Found a matching for end of vars\n");
+            pcVarEnd = matchEnd.rm_so + pcVarStart;
+            strncpy(pszLoopVariables, pcVarStart, pcVarEnd - pcVarStart);
+            regfree(&regexEndVariables);
+            return OK;
+        }
+    }
+    return 0;
+}
 int FormatLine(char *szLineToFormat, char *pszFormattedString) {
     static int iFormattingForLoop = 0;
     char *pcLoopStart = NULL;
@@ -46,9 +85,17 @@ int FormatLine(char *szLineToFormat, char *pszFormattedString) {
         pcLoopStart = szLineToFormat + match.rm_so;
         iFormattingForLoop = 1;
         char *szLoopCondition = (char *) malloc(sizeof (char) * 512);
+        char *szLoopVariables = (char *) malloc(sizeof (char) * 512);
+        bzero(szLoopCondition, 512);
+        bzero(szLoopVariables, 512);
+        FindLoopVariables(pcLoopStart, szLoopVariables);
+        printf("Loop variables: %s\n", szLoopVariables);
         //FindLoopCondition(pcLoopStart, szLoopCondition);
+        regfree(&regexLoop);
         free(szLoopCondition);
-
+        free(szLoopVariables);
+        szLoopCondition = NULL;
+        szLoopVariables = NULL;
     }
 
     printf("\n\niRegextVal: %d\n\n", iRegextVal);
