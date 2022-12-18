@@ -5,13 +5,23 @@
 #include <regex.h>
 #define OK 1
 
-int FormatLine(char *szLineToFormat, char *pszFormattedString, char *pszIterator) {
+int FindLoopCondition(char *pszLoopStart, char *pszLoopCondition) {
+    regex_t regexCondition;
+    regmatch_t *match;
+    char *pcCondStart;
+    char *pcCondEnd;
+    char *szCondStartExpr = ";[[:space:]]*.+;)";
+
+    return OK;
+}
+
+int FormatLine(char *szLineToFormat, char *pszFormattedString) {
     static int iFormattingForLoop = 0;
     char *pcLoopStart = NULL;
     int i;
     size_t ulLineSize = strlen(szLineToFormat);
     regex_t regexLoop;
-    regmatch_t *match;
+    regmatch_t match;
 
     // 1. Sjekk etter løkke, ta vare på pointer til hvor den starter
     // 2. Finn variabelnavn, verdi, og flytt de til en linje over.
@@ -29,15 +39,16 @@ int FormatLine(char *szLineToFormat, char *pszFormattedString, char *pszIterator
 
     printf("FormatLine: %s\n", szLineToFormat);
     int iRegextVal;
-    iRegextVal = regcomp(&regexLoop, "for[[:space:]]*\\(", REG_EXTENDED);
-    iRegextVal = regexec(&regexLoop, szLineToFormat, 1, match, 0);
+    iRegextVal = regcomp(&regexLoop, "for[[:space:]]*\\(.+\\)", REG_EXTENDED);
+    iRegextVal = regexec(&regexLoop, szLineToFormat, 1, &match, 0);
     if (iRegextVal == 0) {
         /* Got the pointer to the end of the */
-        pcLoopStart = &szLineToFormat + match->rm_so;
+        pcLoopStart = szLineToFormat + match.rm_so;
         iFormattingForLoop = 1;
+        char *szLoopCondition = (char *) malloc(sizeof (char) * 512);
+        //FindLoopCondition(pcLoopStart, szLoopCondition);
+        free(szLoopCondition);
 
-        char *pzLoopCondition = (char *) malloc(sizeof (char) * 512);
-        free(pzLoopCondition);
     }
 
     printf("\n\niRegextVal: %d\n\n", iRegextVal);
