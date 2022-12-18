@@ -18,14 +18,12 @@ char *FindLoopCondition(char *pszConditionStart, char *pszLoopCondition) {
     char *pcCondStart = pszConditionStart + 1;
     char *pcCondEnd;
     char *szCondEndExpr = ";";
-    printf("Condition start: %s\n", pcCondStart);
     // Find the end of the condition
     iRegOk = regcomp(&regexConditionEnd, szCondEndExpr, REG_EXTENDED);
     iRegOk = regexec(&regexConditionEnd, pcCondStart, 1, &match, 0);
 
     if (iRegOk == 0) {
-        printf("Condition end: %s\n", pcCondStart + match.rm_eo);
-        pcCondEnd = pcCondStart + match.rm_eo - 1;
+        pcCondEnd = pcCondStart + match.rm_so;
         // Copy the condition to pszLoopCondition
         strncpy(pszLoopCondition, pcCondStart, pcCondEnd - pcCondStart);
         pszLoopCondition[pcCondEnd - pcCondStart] = '\0';
@@ -77,6 +75,23 @@ char *FindLoopVariables(char *pszLoopStart, char *pszLoopVariables) {
     return NULL;
 }
 
+char *FindIteration(char *szIterationStart, char *szIterator) {
+    regex_t regexIterator;
+    regmatch_t matchIterator;
+    int iRegIteratorOk;
+    char *pcItEnd, *pcItStart = szIterationStart + 1;
+    char *szIteratorExpr = "\\)";
+    iRegIteratorOk = regcomp(&regexIterator, szIteratorExpr, REG_EXTENDED);
+    iRegIteratorOk = regexec(&regexIterator, szIterationStart, 1, &matchIterator, 0);
+    if (iRegIteratorOk == 0) {
+        pcItEnd = pcItStart + matchIterator.rm_so - 1;
+        strncpy(szIterator, pcItStart, pcItEnd - pcItStart);
+        szIterator[pcItEnd - pcItStart] = '\0';
+        return pcItEnd;
+    }
+    return NULL;
+}
+
 int FormatLine(char *szLineToFormat, char *pszFormattedString) {
     static int iFormattingForLoop = 0;
     char *pcLoopStart = NULL;
@@ -85,10 +100,6 @@ int FormatLine(char *szLineToFormat, char *pszFormattedString) {
     regex_t regexLoop;
     regmatch_t match;
 
-    // 1. Sjekk etter løkke, ta vare på pointer til hvor den starter
-    // 2. Finn variabelnavn, verdi, og flytt de til en linje over.
-    // 3. Finn test statementet i løkken, og spar på det
-    // 4. Finn inkrement/dekrement, og spar på det
     // 5. Generer while (test) { ... } og erstatt den gamle løkken med den nye
     // 6. Sett inkrement på en ny linje rett før }
 /*
@@ -99,7 +110,6 @@ int FormatLine(char *szLineToFormat, char *pszFormattedString) {
 } regmatch_t;
  */
 
-    printf("FormatLine: %s\n", szLineToFormat);
     int iRegextVal;
     iRegextVal = regcomp(&regexLoop, "for[[:space:]]*\\(.+\\)", REG_EXTENDED);
     iRegextVal = regexec(&regexLoop, szLineToFormat, 1, &match, 0);
@@ -109,23 +119,29 @@ int FormatLine(char *szLineToFormat, char *pszFormattedString) {
         iFormattingForLoop = 1;
         char *szLoopCondition = (char *) malloc(sizeof(char) * 512);
         char *szLoopVariables = (char *) malloc(sizeof(char) * 512);
+        char *szLoopIterator = (char *) malloc(sizeof(char) * 512);
         bzero(szLoopCondition, 512);
         bzero(szLoopVariables, 512);
         char *pcStartOfCondition;
+        char *pcStartOfIteration;
         if ((pcStartOfCondition = FindLoopVariables(pcLoopStart, szLoopVariables)) != NULL) {
             printf("Found loop variables: %s\n", szLoopVariables);
-            FindLoopCondition(pcStartOfCondition, szLoopCondition);
-            printf("Found loop condition: %s\n", szLoopCondition);
+            if((pcStartOfIteration = FindLoopCondition(pcStartOfCondition, szLoopCondition)) != NULL) {
+                printf("Found loop condition: %s\n", szLoopCondition);
+                FindIteration(pcStartOfIteration, szLoopIterator);
+                printf("Found loop iterator: %s\n", szLoopIterator);
+            }
             pcStartOfCondition = NULL;
         }
         regfree(&regexLoop);
         free(szLoopCondition);
         free(szLoopVariables);
+        free(szLoopIterator);
+        szLoopIterator = NULL;
         szLoopCondition = NULL;
         szLoopVariables = NULL;
     }
 
-    printf("\n\niRegextVal: %d\n\n", iRegextVal);
     for (i = 0; i < ulLineSize; i++) {
         char cCurrentChar = szLineToFormat[i];
         char szCurrentChar[2];
