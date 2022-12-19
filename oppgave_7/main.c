@@ -18,6 +18,13 @@ char *FindLoopCondition(char *pszConditionStart, char *pszLoopCondition) {
     char *pcCondStart = pszConditionStart + 1;
     char *pcCondEnd;
     char *szCondEndExpr = ";";
+
+    // Skip preceding whitespace
+    while (*pcCondStart == ' ') {
+        pcCondStart++;
+    }
+
+
     // Find the end of the condition
     iRegOk = regcomp(&regexConditionEnd, szCondEndExpr, REG_EXTENDED);
     iRegOk = regexec(&regexConditionEnd, pcCondStart, 1, &match, 0);
@@ -93,13 +100,14 @@ char *FindIteration(char *szIterationStart, char *szIterator) {
 }
 
 int FormatLine(char *szLineToFormat, char *pszFormattedString) {
-    static int iFormattingForLoop = 0;
+    static int iFormattingForLoop = 0, iNumOfOpenBrackets = 0, iNumOfCloseBrackets = 0;;
     char *pcLoopStart = NULL;
     int i;
     size_t ulLineSize = strlen(szLineToFormat);
     regex_t regexLoop;
     regmatch_t match;
-
+    static char szWhiteSpace[128];
+    static char szLoopIterator[512];
     // 5. Generer while (test) { ... } og erstatt den gamle løkken med den nye
     // 6. Sett inkrement på en ny linje rett før }
 
@@ -108,6 +116,13 @@ int FormatLine(char *szLineToFormat, char *pszFormattedString) {
     iRegextVal = regcomp(&regexLoop, "for[[:space:]]*\\(.+\\)", REG_EXTENDED);
     iRegextVal = regexec(&regexLoop, szLineToFormat, 1, &match, 0);
     if (iRegextVal == 0 && iFormattingForLoop == 0) {
+        if (strstr(szLineToFormat, "{")) {
+            printf("Found a opening bracket");
+            iNumOfOpenBrackets++;
+        }
+        if (strstr(szLineToFormat, "}")) {
+            iNumOfCloseBrackets++;
+        }
         iFormattingForLoop = 1;
         int iWhiteSpaceOk;
         regex_t regexWhiteSpace;
@@ -122,10 +137,15 @@ int FormatLine(char *szLineToFormat, char *pszFormattedString) {
          * */
         iWhiteSpaceOk = regcomp(&regexWhiteSpace, szWhiteSpaceExpr, REG_EXTENDED);
         iWhiteSpaceOk = regexec(&regexWhiteSpace, szLineToFormat, 1, &matchWhiteSpace, 0);
-        char szWhiteSpace[128];
-        bzero(szWhiteSpace, 128);
+
+
+        //  p: szLineToFormat      p + loopStart                        p + ulLineSize
+        //          v                   v                                         v
+        //          |-------------------|---------------------------------------- |
+        //                              for (i ......)                     { .....
 
         if (iWhiteSpaceOk == 0) {
+            bzero(szWhiteSpace, 128);
             char *pcWhiteSpaceStart = matchWhiteSpace.rm_so + szLineToFormat;
             char *pcWhiteSpaceEnd = match.rm_so + szLineToFormat - 1;
             strncpy(szWhiteSpace, pcWhiteSpaceStart, pcWhiteSpaceEnd - pcWhiteSpaceStart);
@@ -136,7 +156,6 @@ int FormatLine(char *szLineToFormat, char *pszFormattedString) {
         iFormattingForLoop = 1;
         char *szLoopCondition = (char *) malloc(sizeof(char) * 512);
         char *szLoopVariables = (char *) malloc(sizeof(char) * 512);
-        char *szLoopIterator = (char *) malloc(sizeof(char) * 512);
         bzero(szLoopCondition, 512);
         bzero(szLoopVariables, 512);
         char *pcStartOfCondition;
@@ -146,22 +165,19 @@ int FormatLine(char *szLineToFormat, char *pszFormattedString) {
             printf("Found loop variables: %s\n", szLoopVariables);
 
             if((pcStartOfIteration = FindLoopCondition(pcStartOfCondition, szLoopCondition)) != NULL) {
+                bzero(szLoopIterator, 512);
                 char *pzWhileLoopPattern = "\n%s%s;\n%swhile (%s) {\n";
                 char *pzWhileLoop = (char *) malloc(sizeof(char) * ulLineSize);
                 bzero(pzWhileLoop, ulLineSize);
                 printf("Found loop condition: %s\n", szLoopCondition);
-                FindIteration(pcStartOfIteration, szLoopIterator);
+                FindIteration(pcStartOfIteration, (char *) &szLoopIterator);
                 printf("Found loop iterator: %s\n", szLoopIterator);
 
-                //  x: szLineToFormat     x - loopStart                             x + ulLineSize
-                //          |-------------------|---------------------------------------- |
-                //                              for (i ......)                     { .....
 
-                //strncat(pszFormattedString, szLineToFormat, pcLoopStart - szLineToFormat);
-                //sprintf(pzWhileLoop, pzWhileLoopPattern, szWhiteSpace, szLoopVariables, szWhiteSpace, szLoopCondition);
+                sprintf(pzWhileLoop, pzWhileLoopPattern, szWhiteSpace, szLoopVariables, szWhiteSpace, szLoopCondition);
                 printf("White space: %s\n", szWhiteSpace);
                 printf(pzWhileLoopPattern, szWhiteSpace, szLoopVariables, szWhiteSpace, szLoopCondition);
-                //strcat(pszFormattedString, pzWhileLoop);
+                strcat(pszFormattedString, pzWhileLoop);
                 free(pzWhileLoop);
             }
 
@@ -171,24 +187,47 @@ int FormatLine(char *szLineToFormat, char *pszFormattedString) {
         regfree(&regexLoop);
         free(szLoopCondition);
         free(szLoopVariables);
-        free(szLoopIterator);
-        szLoopIterator = NULL;
         szLoopCondition = NULL;
         szLoopVariables = NULL;
-    }
-
-    for (i = 0; i < ulLineSize; i++) {
-        char cCurrentChar = szLineToFormat[i];
-        char szCurrentChar[2];
-
-        // Replacing TAB with 3 spaces
-        if (cCurrentChar == 9) {
-            strcat(pszFormattedString, "   ");
-            continue;
+    } else if (iRegextVal == 1 && iFormattingForLoop == 0) {
+        strcat(pszFormattedString, szLineToFormat);
+    } else if (iRegextVal == 1 && iFormattingForLoop == 1) {
+        char *pcClosingBracket;
+        if (strstr(szLineToFormat, "{")) {
+            iNumOfOpenBrackets++;
         }
-        sprintf(szCurrentChar, "%c", cCurrentChar);
-        strcat(pszFormattedString, szCurrentChar);
+        if ((pcClosingBracket = strstr(szLineToFormat, "}"))) {
+            iNumOfCloseBrackets++;
+        }
+        printf("Open brackets: %d, Close brackets: %d\n", iNumOfOpenBrackets, iNumOfCloseBrackets);
+        if (iNumOfOpenBrackets == iNumOfCloseBrackets) {
+            char *szIteratorPattern = "%s%s;\n%s}\n";
+            char *szIterator = (char *) malloc(sizeof(char) * 512);
+            printf("Loop iterator: %s\n", szLoopIterator);
+            bzero(szIterator, 512);
+            sprintf(szIterator, szIteratorPattern, szWhiteSpace, szLoopIterator, szWhiteSpace);
+            strcat(pszFormattedString, szIterator);
+            iFormattingForLoop = 0;
+            iNumOfOpenBrackets = 0;
+            iNumOfCloseBrackets = 0;
+            pcClosingBracket = NULL;
+        } else {
+            strcat(pszFormattedString, szLineToFormat);
+        }
     }
+
+//    for (i = 0; i < ulLineSize; i++) {
+//        char cCurrentChar = szLineToFormat[i];
+//        char szCurrentChar[2];
+//
+//        // Replacing TAB with 3 spaces
+//        if (cCurrentChar == 9) {
+//            strcat(pszFormattedString, "   ");
+//            continue;
+//        }
+//        sprintf(szCurrentChar, "%c", cCurrentChar);
+//        strcat(pszFormattedString, szCurrentChar);
+//    }
 
     return OK;
 }
@@ -214,7 +253,7 @@ int main(int iArgC, char *pszArgV[]) {
         FormatLine(szLine, pszFormattedString);
     }
 
-    //printf("%s", pszFormattedString);
+    printf("%s", pszFormattedString);
     fclose(fpOriginalFile);
     FILE *fpBeautifiedFile = fopen("testfile_beautified.c", "w");
     fwrite(pszFormattedString, 1, strlen(pszFormattedString), fpOriginalFile);
