@@ -279,7 +279,24 @@ int FormatWhiteSpace(char *pzFormattedString, char *pzFormattedWhiteSpaceString)
     }
     return OK;
 }
+// Copy a line \n from pszString into pszLine until reaching \0
+int ReadOneLineFromString(char **pszString, char *pszLine) {
+    char currentChar[2];
 
+    int i;
+    for (i = 0; i < strlen(*pszString); i++) {
+        sprintf(currentChar, "%c", *pszString[i]);
+        strcat(pszLine, currentChar);
+
+        if (*pszString[i + 1] == '\n') {
+            *pszString += i;
+            return OK;
+        } else if (*pszString[i + 1] == '\0') {
+            *pszString += i;
+            return 0;
+        }
+    }
+}
 int StartFormatting() {
 
     FILE *fpOriginalFile = fopen("testfile.c", "r");
@@ -305,19 +322,33 @@ int StartFormatting() {
     FormatWhiteSpace(pszFormattedString, pszFormattedWhiteSpaceString);
 
     if (structAnalyzerState->iFoundNestedLoop) {
-        bzero(pszFormattedString, lFileSize + (lFileSize / 2));
-        char *p = pszFormattedWhiteSpaceString;
-        char *pLine = NULL;
-        while(p != NULL || *p != '\0') {
-            printf("Found newline \n");
-            p = strstr(p, "\n");
-            strncpy(pLine, p, p - pszFormattedWhiteSpaceString);
-            FormatLine(pLine, pszFormattedString, structAnalyzerState);
-        }
-        strcpy(pszFormattedWhiteSpaceString, pszFormattedString);
+
+//        char test[1024];
+//        char currentChar[2];
+//        int i;
+//        bzero(test, 1024);
+//        bzero(pszFormattedString, lFileSize + (lFileSize / 2));
+//        strcpy(pszFormattedString, pszFormattedWhiteSpaceString);
+//        bzero(pszFormattedWhiteSpaceString, lFileSize + (lFileSize / 2));
+//        char *p = pszFormattedString;
+//        for (i = 0; i < strlen(pszFormattedString); i++) {
+//            bzero(currentChar, 2);
+//            sprintf(currentChar, "%c", p[i]);
+//
+//            strcat(test, currentChar);
+//            if (p[i] == '\n') {
+//                p += i;
+//                //FormatLine(test, pszFormattedWhiteSpaceString, structAnalyzerState);
+//                printf("Line: %s\n", test);
+//                bzero(test, 1024);
+//                //return OK;
+//            } else if (p[i + 1] == '\0') {
+//                break;
+//            }
+//        }
     }
 
-    printf("Formated string: %s", pszFormattedWhiteSpaceString);
+    //printf("Formated string: %s", pszFormattedWhiteSpaceString);
     fclose(fpOriginalFile);
     FILE *fpBeautifiedFile = fopen("testfile_beautified.c", "w");
     fwrite(pszFormattedWhiteSpaceString, 1, strlen(pszFormattedWhiteSpaceString), fpBeautifiedFile);
@@ -326,7 +357,3 @@ int StartFormatting() {
     return 0;
 }
 
-// Copy a line \n from pszString into pszLine until reaching \0
-int ReadOneLineFromString(char *pszString, char *pszLine) {
-
-}
