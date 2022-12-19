@@ -82,16 +82,19 @@ char *FindLoopVariables(char *pszLoopStart, char *pszLoopVariables) {
     return NULL;
 }
 
+/*
+ * If everything's gone fine so far, I only need to find the ")"
+ * Takes the start of the iteration part of the loop as argument, as well as a buffer for the result
+ *
+ * Returns NULL on error.
+ * */
 char *FindIteration(char *szIterationStart, char *szIterator) {
-    regex_t regexIterator;
-    regmatch_t matchIterator;
-    int iRegIteratorOk;
-    char *pcItEnd, *pcItStart = szIterationStart + 1;
-    char *szIteratorExpr = "\\)";
-    iRegIteratorOk = regcomp(&regexIterator, szIteratorExpr, REG_EXTENDED);
-    iRegIteratorOk = regexec(&regexIterator, szIterationStart, 1, &matchIterator, 0);
-    if (iRegIteratorOk == 0) {
-        pcItEnd = pcItStart + matchIterator.rm_so - 1;
+    char *pcItEnd, *pcItStart = szIterationStart;
+    while (*pcItStart == ' ' || *pcItStart == ';') {
+        pcItStart++;
+    }
+    pcItEnd = strstr(pcItStart, ")");
+    if (pcItEnd != NULL) {
         strncpy(szIterator, pcItStart, pcItEnd - pcItStart);
         szIterator[pcItEnd - pcItStart] = '\0';
         return pcItEnd;
@@ -108,10 +111,6 @@ int FormatLine(char *szLineToFormat, char *pszFormattedString) {
     regmatch_t match;
     static char szWhiteSpace[128];
     static char szLoopIterator[512];
-    // 5. Generer while (test) { ... } og erstatt den gamle løkken med den nye
-    // 6. Sett inkrement på en ny linje rett før }
-
-
     int iRegextVal;
     iRegextVal = regcomp(&regexLoop, "for[[:space:]]*\\(.+\\)", REG_EXTENDED);
     iRegextVal = regexec(&regexLoop, szLineToFormat, 1, &match, 0);
