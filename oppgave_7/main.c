@@ -102,19 +102,36 @@ int FormatLine(char *szLineToFormat, char *pszFormattedString) {
 
     // 5. Generer while (test) { ... } og erstatt den gamle løkken med den nye
     // 6. Sett inkrement på en ny linje rett før }
-/*
- *
- * typedef struct {
-    regoff_t    rm_so;  Byte offset from start of string to start of substring
-    regoff_t    rm_eo; Byte offset from start of string of the first character after the end of substring
-} regmatch_t;
- */
+
 
     int iRegextVal;
     iRegextVal = regcomp(&regexLoop, "for[[:space:]]*\\(.+\\)", REG_EXTENDED);
     iRegextVal = regexec(&regexLoop, szLineToFormat, 1, &match, 0);
-    if (iRegextVal == 0) {
-        /* Got the pointer to the end of the */
+    if (iRegextVal == 0 && iFormattingForLoop == 0) {
+        iFormattingForLoop = 1;
+        int iWhiteSpaceOk;
+        regex_t regexWhiteSpace;
+        regmatch_t matchWhiteSpace;
+        char *szWhiteSpaceExpr = "[[:space:]]*for[[:space:]]*\\(.+\\)";
+
+        /*
+         * Copy the white space on the line before the loop
+         * Making an assumption that the loop starts and ends on new lines
+         * Of course this is not always the case, but I think it's out of scope to
+         * handle every possible case.
+         * */
+        iWhiteSpaceOk = regcomp(&regexWhiteSpace, szWhiteSpaceExpr, REG_EXTENDED);
+        iWhiteSpaceOk = regexec(&regexWhiteSpace, szLineToFormat, 1, &matchWhiteSpace, 0);
+        char szWhiteSpace[128];
+        bzero(szWhiteSpace, 128);
+
+        if (iWhiteSpaceOk == 0) {
+            char *pcWhiteSpaceStart = matchWhiteSpace.rm_so + szLineToFormat;
+            char *pcWhiteSpaceEnd = match.rm_so + szLineToFormat - 1;
+            strncpy(szWhiteSpace, pcWhiteSpaceStart, pcWhiteSpaceEnd - pcWhiteSpaceStart);
+        }
+
+        /* Got the pointer to the start of loop */
         pcLoopStart = szLineToFormat + match.rm_so;
         iFormattingForLoop = 1;
         char *szLoopCondition = (char *) malloc(sizeof(char) * 512);
@@ -124,15 +141,33 @@ int FormatLine(char *szLineToFormat, char *pszFormattedString) {
         bzero(szLoopVariables, 512);
         char *pcStartOfCondition;
         char *pcStartOfIteration;
+
         if ((pcStartOfCondition = FindLoopVariables(pcLoopStart, szLoopVariables)) != NULL) {
             printf("Found loop variables: %s\n", szLoopVariables);
+
             if((pcStartOfIteration = FindLoopCondition(pcStartOfCondition, szLoopCondition)) != NULL) {
+                char *pzWhileLoopPattern = "\n%s%s;\n%swhile (%s) {\n";
+                char *pzWhileLoop = (char *) malloc(sizeof(char) * ulLineSize);
+                bzero(pzWhileLoop, ulLineSize);
                 printf("Found loop condition: %s\n", szLoopCondition);
                 FindIteration(pcStartOfIteration, szLoopIterator);
                 printf("Found loop iterator: %s\n", szLoopIterator);
+
+                //  x: szLineToFormat     x - loopStart                             x + ulLineSize
+                //          |-------------------|---------------------------------------- |
+                //                              for (i ......)                     { .....
+
+                //strncat(pszFormattedString, szLineToFormat, pcLoopStart - szLineToFormat);
+                //sprintf(pzWhileLoop, pzWhileLoopPattern, szWhiteSpace, szLoopVariables, szWhiteSpace, szLoopCondition);
+                printf("White space: %s\n", szWhiteSpace);
+                printf(pzWhileLoopPattern, szWhiteSpace, szLoopVariables, szWhiteSpace, szLoopCondition);
+                //strcat(pszFormattedString, pzWhileLoop);
+                free(pzWhileLoop);
             }
+
             pcStartOfCondition = NULL;
         }
+
         regfree(&regexLoop);
         free(szLoopCondition);
         free(szLoopVariables);
@@ -179,7 +214,7 @@ int main(int iArgC, char *pszArgV[]) {
         FormatLine(szLine, pszFormattedString);
     }
 
-    printf("%s", pszFormattedString);
+    //printf("%s", pszFormattedString);
     fclose(fpOriginalFile);
     FILE *fpBeautifiedFile = fopen("testfile_beautified.c", "w");
     fwrite(pszFormattedString, 1, strlen(pszFormattedString), fpOriginalFile);
