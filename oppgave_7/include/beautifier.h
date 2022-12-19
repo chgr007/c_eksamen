@@ -14,11 +14,22 @@ typedef struct _ANALYZER_STATE {
 } ANALYZER_STATE;
 
 int FormatWhiteSpace(char *pzFormattedString, char *pzFormattedWhiteSpaceString);
+
 int FormatLine(char *szLineToFormat, char *pszFormattedString, ANALYZER_STATE *pstruAnalyzerState);
+
 char *FindIteration(char *szIterationStart, char *szIterator);
+
 char *FindLoopVariables(char *pszLoopStart, char *pszLoopVariables);
+
 char *FindLoopCondition(char *pszConditionStart, char *pszLoopCondition);
+
 int StartFormatting();
+
 int FindWhiteSpaces(char *pszLine, long iLoopStartOffset, ANALYZER_STATE *pState);
+
 int CheckForBrackets(char *pszLine, ANALYZER_STATE *pState);
+
+int HandleLoopMatch(char *szLineToFormat, long iLoopStartOffset, ANALYZER_STATE *pstruAnalyzerState,
+                    char *szFormattedString);
+
 #endif //C_EKSAMEN_BEAUTIFIER_H

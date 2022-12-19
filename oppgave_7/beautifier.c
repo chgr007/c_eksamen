@@ -132,6 +132,7 @@ int FindWhiteSpaces(char *pszLine, long iLoopStartOffset, ANALYZER_STATE *pState
 
     return OK;
 }
+
 int CheckForBrackets(char *pszLine, ANALYZER_STATE *pState) {
     if (strstr(pszLine, "{")) {
         pState->iNumOpenBrackets++;
@@ -140,17 +141,75 @@ int CheckForBrackets(char *pszLine, ANALYZER_STATE *pState) {
         pState->iNumCloseBrackets++;
     }
 }
-int FormatLine(char *szLineToFormat, char *pszFormattedString, ANALYZER_STATE *pstruAnalyzerState) {
 
-    // (p): szLineToFormat      p + loopStart                        p + ulLineSize
-    //          v                   v                                         v
-    //          |-------------------|---------------------------------------- |
-    //                              for (i ......)                     { .....
+/*
+ * Runs when a loop is discovered, and analyzes the first line of the for loop.
+ *
+ * Takes the line as first argument, the byte offset to where the loop starts as the second,
+ * and the application state as the third argument
+ *
+ * (p): szLineToFormat      p + iLoopStartOffset                    p + ulLineSize
+ *          v                   v                                         v
+ *          |-------------------|---------------------------------------- |
+ *                              for (i ......)                     { .....
+ */
 
-
+int HandleLoopMatch(char *szLineToFormat, long iLoopStartOffset, ANALYZER_STATE *pstruAnalyzerState,
+                    char *szFormattedString) {
+    char *pcStartOfCondition;
+    char *pcStartOfIteration;
     char *pcLoopStart = NULL;
-    int i;
     size_t ulLineSize = strlen(szLineToFormat);
+
+    pstruAnalyzerState->iWorkingWithLoop = 1;
+
+    CheckForBrackets(szLineToFormat, pstruAnalyzerState);
+    FindWhiteSpaces(szLineToFormat, iLoopStartOffset, pstruAnalyzerState);
+
+    /* Got the pointer to the start of loop */
+    pcLoopStart = szLineToFormat + iLoopStartOffset;
+
+    if ((pcStartOfCondition = FindLoopVariables(pcLoopStart, pstruAnalyzerState->szLoopVariables)) != NULL) {
+        /* Replace start of loop */
+        if ((pcStartOfIteration = FindLoopCondition(pcStartOfCondition, pstruAnalyzerState->szConditions)) !=
+            NULL) {
+            char *pzWhileLoopPattern = "\n%s%s;\n%swhile (%s) {\n";
+            char *pzWhileLoop = (char *) malloc(sizeof(char) * ulLineSize);
+            bzero(pzWhileLoop, ulLineSize);
+            if (FindIteration(pcStartOfIteration, pstruAnalyzerState->szIncrementors)) {
+                sprintf(
+                        pzWhileLoop, pzWhileLoopPattern,
+                        pstruAnalyzerState->szWhiteSpace, pstruAnalyzerState->szLoopVariables,
+                        pstruAnalyzerState->szWhiteSpace, pstruAnalyzerState->szConditions
+                );
+                printf(pzWhileLoopPattern, pstruAnalyzerState->szWhiteSpace, pstruAnalyzerState->szLoopVariables,
+                       pstruAnalyzerState->szWhiteSpace, pstruAnalyzerState->szConditions);
+                strcat(szFormattedString, pzWhileLoop);
+                free(pzWhileLoop);
+            } else {
+                printf("Error finding iteration\n");
+                free(pzWhileLoop);
+                return 0;
+            }
+        } else {
+            printf("Error finding loop condition\n");
+            return 0;
+        }
+        pcStartOfCondition = NULL;
+    } else {
+        printf("Error finding loop variables\n");
+        return 0;
+    }
+
+    return OK;
+}
+
+/*
+ * Runs one time per line. Takes the unformatted line as first argument,
+ * The output string as second, and the state of the application as the third argument
+ * */
+int FormatLine(char *szLineToFormat, char *pszFormattedString, ANALYZER_STATE *pstruAnalyzerState) {
+    int i;
     regex_t regexLoop;
     regmatch_t match;
 
@@ -158,84 +217,45 @@ int FormatLine(char *szLineToFormat, char *pszFormattedString, ANALYZER_STATE *p
     iRegextVal = regcomp(&regexLoop, "for[[:space:]]*\\(.+\\)", REG_EXTENDED);
     iRegextVal = regexec(&regexLoop, szLineToFormat, 1, &match, 0);
     if (iRegextVal == 0 && pstruAnalyzerState->iWorkingWithLoop == 0) {
-        pstruAnalyzerState->iWorkingWithLoop = 1;
-        int iWhiteSpaceOk;
-        regex_t regexWhiteSpace;
-        regmatch_t matchWhiteSpace;
-        char *szWhiteSpaceExpr = "[[:space:]]*for[[:space:]]*\\(.+\\)";
-        CheckForBrackets(szLineToFormat, pstruAnalyzerState);
-//        if (strstr(szLineToFormat, "{")) {
-//            pstruAnalyzerState->iNumOpenBrackets++;
-//        }
-//        if (strstr(szLineToFormat, "}")) {
-//            pstruAnalyzerState->iNumCloseBrackets++;
-//        }
-
-        FindWhiteSpaces(szLineToFormat, match.rm_so, pstruAnalyzerState);
-        /* Got the pointer to the start of loop */
-        pcLoopStart = szLineToFormat + match.rm_so;
-        char *szLoopCondition = (char *) malloc(sizeof(char) * 512);
-        char *szLoopVariables = (char *) malloc(sizeof(char) * 512);
-        bzero(szLoopCondition, 512);
-        bzero(szLoopVariables, 512);
-        char *pcStartOfCondition;
-        char *pcStartOfIteration;
-
-        if ((pcStartOfCondition = FindLoopVariables(pcLoopStart, szLoopVariables)) != NULL) {
-            printf("Found loop variables: %s\n", szLoopVariables);
-
-            if ((pcStartOfIteration = FindLoopCondition(pcStartOfCondition, szLoopCondition)) != NULL) {
-                char *pzWhileLoopPattern = "\n%s%s;\n%swhile (%s) {\n";
-                char *pzWhileLoop = (char *) malloc(sizeof(char) * ulLineSize);
-                bzero(pzWhileLoop, ulLineSize);
-                printf("Found loop condition: %s\n", szLoopCondition);
-                FindIteration(pcStartOfIteration, pstruAnalyzerState->szIncrementors);
-                printf("Found loop iterator: %s\n", pstruAnalyzerState->szIncrementors);
-
-
-                sprintf(pzWhileLoop, pzWhileLoopPattern, pstruAnalyzerState->szWhiteSpace, szLoopVariables, pstruAnalyzerState->szWhiteSpace, szLoopCondition);
-                printf("White space: %s\n", pstruAnalyzerState->szWhiteSpace);
-                printf(pzWhileLoopPattern, pstruAnalyzerState->szWhiteSpace, szLoopVariables, pstruAnalyzerState->szWhiteSpace, szLoopCondition);
-                strcat(pszFormattedString, pzWhileLoop);
-                free(pzWhileLoop);
-            }
-
-            pcStartOfCondition = NULL;
+        if (HandleLoopMatch(szLineToFormat, match.rm_so, pstruAnalyzerState, pszFormattedString)) {
+            regfree(&regexLoop);
+        } else {
+            return 0;
         }
-
-        regfree(&regexLoop);
-        free(szLoopCondition);
-        free(szLoopVariables);
-        szLoopCondition = NULL;
-        szLoopVariables = NULL;
     } else if (iRegextVal == 1 && pstruAnalyzerState->iWorkingWithLoop == 0) {
+        /* Not working with a loop, just concat the line */
         strcat(pszFormattedString, szLineToFormat);
     } else if (iRegextVal == 0 && pstruAnalyzerState->iWorkingWithLoop == 1) {
-        // Oh shit, nested loops!
+        /* Got a nested loop. Just concat it, will handle it on next iteration  */
+        pstruAnalyzerState->iFoundNestedLoop = 1;
         CheckForBrackets(szLineToFormat, pstruAnalyzerState);
         strcat(pszFormattedString, szLineToFormat);
-    }
-    else if (iRegextVal == 1 && pstruAnalyzerState->iWorkingWithLoop == 1) {
+    } else if (iRegextVal == 1 && pstruAnalyzerState->iWorkingWithLoop == 1) {
+        /* Working with the contents of a loop. */
         char *pcClosingBracket;
+
         CheckForBrackets(szLineToFormat, pstruAnalyzerState);
-        printf("Open brackets: %d, Close brackets: %d\n", pstruAnalyzerState->iNumOpenBrackets, pstruAnalyzerState->iNumCloseBrackets);
+
+        /* Found a matching number of closing and opening brackets. This indicates that the program
+         * is on the last line of the loop
+         */
         if (pstruAnalyzerState->iNumOpenBrackets == pstruAnalyzerState->iNumCloseBrackets) {
             char *szIteratorPattern = "%s   %s;\n%s}\n";
             char *szIterator = (char *) malloc(sizeof(char) * 512);
             printf("Loop iterator: %s\n", pstruAnalyzerState->szIncrementors);
             bzero(szIterator, 512);
-            sprintf(szIterator, szIteratorPattern, pstruAnalyzerState->szWhiteSpace, pstruAnalyzerState->szIncrementors, pstruAnalyzerState->szWhiteSpace);
+            sprintf(szIterator, szIteratorPattern, pstruAnalyzerState->szWhiteSpace, pstruAnalyzerState->szIncrementors,
+                    pstruAnalyzerState->szWhiteSpace);
             strcat(pszFormattedString, szIterator);
             pstruAnalyzerState->iWorkingWithLoop = 0;
             pstruAnalyzerState->iNumOpenBrackets = 0;
             pstruAnalyzerState->iNumCloseBrackets = 0;
             pcClosingBracket = NULL;
         } else {
+            /* Not on the last line of the loop. Just concat the content */
             strcat(pszFormattedString, szLineToFormat);
         }
     }
-
-
     return OK;
 }
 
@@ -283,6 +303,20 @@ int StartFormatting() {
         FormatLine(szLine, pszFormattedString, structAnalyzerState);
     }
     FormatWhiteSpace(pszFormattedString, pszFormattedWhiteSpaceString);
+
+    if (structAnalyzerState->iFoundNestedLoop) {
+        bzero(pszFormattedString, lFileSize + (lFileSize / 2));
+        char *p = pszFormattedWhiteSpaceString;
+        char *pLine = NULL;
+        while(p != NULL || *p != '\0') {
+            printf("Found newline \n");
+            p = strstr(p, "\n");
+            strncpy(pLine, p, p - pszFormattedWhiteSpaceString);
+            FormatLine(pLine, pszFormattedString, structAnalyzerState);
+        }
+        strcpy(pszFormattedWhiteSpaceString, pszFormattedString);
+    }
+
     printf("Formated string: %s", pszFormattedWhiteSpaceString);
     fclose(fpOriginalFile);
     FILE *fpBeautifiedFile = fopen("testfile_beautified.c", "w");
@@ -290,4 +324,9 @@ int StartFormatting() {
     free(pszFormattedString);
     fclose(fpBeautifiedFile);
     return 0;
+}
+
+// Copy a line \n from pszString into pszLine until reaching \0
+int ReadOneLineFromString(char *pszString, char *pszLine) {
+
 }
