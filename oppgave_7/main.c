@@ -163,7 +163,7 @@ int FormatLine(char *szLineToFormat, char *pszFormattedString) {
         if ((pcStartOfCondition = FindLoopVariables(pcLoopStart, szLoopVariables)) != NULL) {
             printf("Found loop variables: %s\n", szLoopVariables);
 
-            if((pcStartOfIteration = FindLoopCondition(pcStartOfCondition, szLoopCondition)) != NULL) {
+            if ((pcStartOfIteration = FindLoopCondition(pcStartOfCondition, szLoopCondition)) != NULL) {
                 bzero(szLoopIterator, 512);
                 char *pzWhileLoopPattern = "\n%s%s;\n%swhile (%s) {\n";
                 char *pzWhileLoop = (char *) malloc(sizeof(char) * ulLineSize);
@@ -190,7 +190,17 @@ int FormatLine(char *szLineToFormat, char *pszFormattedString) {
         szLoopVariables = NULL;
     } else if (iRegextVal == 1 && iFormattingForLoop == 0) {
         strcat(pszFormattedString, szLineToFormat);
-    } else if (iRegextVal == 1 && iFormattingForLoop == 1) {
+    } else if (iRegextVal == 0 && iFormattingForLoop == 1) {
+        // Oh shit, nested loops!
+        if (strstr(szLineToFormat, "{")) {
+            iNumOfOpenBrackets++;
+        }
+        if (strstr(szLineToFormat, "}")) {
+            iNumOfCloseBrackets++;
+        }
+        strcat(pszFormattedString, szLineToFormat);
+    }
+    else if (iRegextVal == 1 && iFormattingForLoop == 1) {
         char *pcClosingBracket;
         if (strstr(szLineToFormat, "{")) {
             iNumOfOpenBrackets++;
@@ -200,7 +210,7 @@ int FormatLine(char *szLineToFormat, char *pszFormattedString) {
         }
         printf("Open brackets: %d, Close brackets: %d\n", iNumOfOpenBrackets, iNumOfCloseBrackets);
         if (iNumOfOpenBrackets == iNumOfCloseBrackets) {
-            char *szIteratorPattern = "%s%s;\n%s}\n";
+            char *szIteratorPattern = "%s   %s;\n%s}\n";
             char *szIterator = (char *) malloc(sizeof(char) * 512);
             printf("Loop iterator: %s\n", szLoopIterator);
             bzero(szIterator, 512);
@@ -215,20 +225,24 @@ int FormatLine(char *szLineToFormat, char *pszFormattedString) {
         }
     }
 
-//    for (i = 0; i < ulLineSize; i++) {
-//        char cCurrentChar = szLineToFormat[i];
-//        char szCurrentChar[2];
-//
-//        // Replacing TAB with 3 spaces
-//        if (cCurrentChar == 9) {
-//            strcat(pszFormattedString, "   ");
-//            continue;
-//        }
-//        sprintf(szCurrentChar, "%c", cCurrentChar);
-//        strcat(pszFormattedString, szCurrentChar);
-//    }
 
     return OK;
+}
+
+int FormatWhiteSpace(char *pzFormattedString, char *pzFormattedWhiteSpaceString) {
+    int i;
+    for (i = 0; i < strlen(pzFormattedString); i++) {
+        char cCurrentChar = pzFormattedString[i];
+        char szCurrentChar[2];
+        sprintf(szCurrentChar, "%c", cCurrentChar);
+        // Replacing TAB with 3 spaces
+        if (cCurrentChar == 9) {
+            strcat(pzFormattedWhiteSpaceString, "   ");
+            printf("Applying 3 spaces\n");
+            continue;
+        }
+        strcat(pzFormattedWhiteSpaceString, szCurrentChar);
+    }
 }
 
 int main(int iArgC, char *pszArgV[]) {
@@ -242,8 +256,8 @@ int main(int iArgC, char *pszArgV[]) {
 
     char *pszFormattedString = (char *) malloc(lFileSize + (lFileSize / 2));
     bzero(pszFormattedString, lFileSize);
-
-
+    char *pszFormattedWhiteSpaceString = (char *) malloc(lFileSize + (lFileSize / 2));
+    bzero(pszFormattedWhiteSpaceString, lFileSize + (lFileSize / 2));
     char *szLine = NULL;
     size_t ulBufLen = 0;
     ssize_t iReadBytes;
@@ -251,11 +265,11 @@ int main(int iArgC, char *pszArgV[]) {
     while ((iReadBytes = getline(&szLine, &ulBufLen, fpOriginalFile)) != -1) {
         FormatLine(szLine, pszFormattedString);
     }
-
-    printf("%s", pszFormattedString);
+    FormatWhiteSpace(pszFormattedString, pszFormattedWhiteSpaceString);
+    printf("Formated string: %s", pszFormattedWhiteSpaceString);
     fclose(fpOriginalFile);
     FILE *fpBeautifiedFile = fopen("testfile_beautified.c", "w");
-    fwrite(pszFormattedString, 1, strlen(pszFormattedString), fpOriginalFile);
+    fwrite(pszFormattedWhiteSpaceString, 1, strlen(pszFormattedWhiteSpaceString), fpBeautifiedFile);
     free(pszFormattedString);
     fclose(fpBeautifiedFile);
     return 0;
