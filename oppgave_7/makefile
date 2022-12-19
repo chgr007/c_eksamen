@@ -10,13 +10,13 @@ LDFLAGS = -Wall -Wextra -g -O0 -I$(INCLDIR)
 OBJDIR = obj
 DEBUGOBJSDIR = debugobjs
 
-_DEPS =
+_DEPS = beautifier.h
 DEPS = $(patsubst %,$(INCLDIR)/%,$(_DEPS))
 
-_OBJS = main.o
+_OBJS = main.o beautifier.o
 OBJS = $(patsubst %,$(OBJDIR)/%,$(_OBJS))
 
-_DEBUGOBJS = main.o
+_DEBUGOBJS = $(_OBJS)
 DEBUGOBJS = $(patsubst %,$(DEBUGOBJSDIR)/%,$(_DEBUGOBJS))
 
 

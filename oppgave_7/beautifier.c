@@ -104,6 +104,42 @@ char *FindIteration(char *szIterationStart, char *szIterator) {
     return NULL;
 }
 
+/*
+ * Takes the start line with the discovered loop as the first parameter,
+ * the second param is the offset to the start of the loop, and the third is the application state
+ *
+ * Copy the white space on the line before the loop
+ * Making an assumption that the loop starts and ends on new lines
+ * Of course this is not always the case, but I think it's out of scope to
+ * handle every possible case.
+ * */
+int FindWhiteSpaces(char *pszLine, long iLoopStartOffset, ANALYZER_STATE *pState) {
+    int iWhiteSpaceOk;
+    regex_t regexWhiteSpace;
+    regmatch_t matchWhiteSpace;
+    char *szWhiteSpaceExpr = "[[:space:]]*for[[:space:]]*\\(.+\\)";
+
+    iWhiteSpaceOk = regcomp(&regexWhiteSpace, szWhiteSpaceExpr, REG_EXTENDED);
+    iWhiteSpaceOk = regexec(&regexWhiteSpace, pszLine, 1, &matchWhiteSpace, 0);
+
+    if (iWhiteSpaceOk == 0) {
+        char *pcWhiteSpaceStart = matchWhiteSpace.rm_so + pszLine;
+        char *pcWhiteSpaceEnd = iLoopStartOffset + pszLine - 1;
+        strncpy(pState->szWhiteSpace, pcWhiteSpaceStart, pcWhiteSpaceEnd - pcWhiteSpaceStart);
+    } else {
+        strncpy(pState->szWhiteSpace, "", 1);
+    }
+
+    return OK;
+}
+int CheckForBrackets(char *pszLine, ANALYZER_STATE *pState) {
+    if (strstr(pszLine, "{")) {
+        pState->iNumOpenBrackets++;
+    }
+    if (strstr(pszLine, "}")) {
+        pState->iNumCloseBrackets++;
+    }
+}
 int FormatLine(char *szLineToFormat, char *pszFormattedString, ANALYZER_STATE *pstruAnalyzerState) {
 
     // (p): szLineToFormat      p + loopStart                        p + ulLineSize
@@ -127,32 +163,15 @@ int FormatLine(char *szLineToFormat, char *pszFormattedString, ANALYZER_STATE *p
         regex_t regexWhiteSpace;
         regmatch_t matchWhiteSpace;
         char *szWhiteSpaceExpr = "[[:space:]]*for[[:space:]]*\\(.+\\)";
+        CheckForBrackets(szLineToFormat, pstruAnalyzerState);
+//        if (strstr(szLineToFormat, "{")) {
+//            pstruAnalyzerState->iNumOpenBrackets++;
+//        }
+//        if (strstr(szLineToFormat, "}")) {
+//            pstruAnalyzerState->iNumCloseBrackets++;
+//        }
 
-        if (strstr(szLineToFormat, "{")) {
-            printf("Found a opening bracket");
-            pstruAnalyzerState->iNumOpenBrackets++;
-        }
-        if (strstr(szLineToFormat, "}")) {
-            pstruAnalyzerState->iNumCloseBrackets++;
-        }
-
-        /*
-         * Copy the white space on the line before the loop
-         * Making an assumption that the loop starts and ends on new lines
-         * Of course this is not always the case, but I think it's out of scope to
-         * handle every possible case.
-         * */
-        iWhiteSpaceOk = regcomp(&regexWhiteSpace, szWhiteSpaceExpr, REG_EXTENDED);
-        iWhiteSpaceOk = regexec(&regexWhiteSpace, szLineToFormat, 1, &matchWhiteSpace, 0);
-
-
-
-        if (iWhiteSpaceOk == 0) {
-            char *pcWhiteSpaceStart = matchWhiteSpace.rm_so + szLineToFormat;
-            char *pcWhiteSpaceEnd = match.rm_so + szLineToFormat - 1;
-            strncpy(pstruAnalyzerState->szWhiteSpace, pcWhiteSpaceStart, pcWhiteSpaceEnd - pcWhiteSpaceStart);
-        }
-
+        FindWhiteSpaces(szLineToFormat, match.rm_so, pstruAnalyzerState);
         /* Got the pointer to the start of loop */
         pcLoopStart = szLineToFormat + match.rm_so;
         char *szLoopCondition = (char *) malloc(sizeof(char) * 512);
@@ -193,22 +212,12 @@ int FormatLine(char *szLineToFormat, char *pszFormattedString, ANALYZER_STATE *p
         strcat(pszFormattedString, szLineToFormat);
     } else if (iRegextVal == 0 && pstruAnalyzerState->iWorkingWithLoop == 1) {
         // Oh shit, nested loops!
-        if (strstr(szLineToFormat, "{")) {
-            pstruAnalyzerState->iNumOpenBrackets++;
-        }
-        if (strstr(szLineToFormat, "}")) {
-            pstruAnalyzerState->iNumCloseBrackets++;
-        }
+        CheckForBrackets(szLineToFormat, pstruAnalyzerState);
         strcat(pszFormattedString, szLineToFormat);
     }
     else if (iRegextVal == 1 && pstruAnalyzerState->iWorkingWithLoop == 1) {
         char *pcClosingBracket;
-        if (strstr(szLineToFormat, "{")) {
-            pstruAnalyzerState->iNumOpenBrackets++;
-        }
-        if ((pcClosingBracket = strstr(szLineToFormat, "}"))) {
-            pstruAnalyzerState->iNumCloseBrackets++;
-        }
+        CheckForBrackets(szLineToFormat, pstruAnalyzerState);
         printf("Open brackets: %d, Close brackets: %d\n", pstruAnalyzerState->iNumOpenBrackets, pstruAnalyzerState->iNumCloseBrackets);
         if (pstruAnalyzerState->iNumOpenBrackets == pstruAnalyzerState->iNumCloseBrackets) {
             char *szIteratorPattern = "%s   %s;\n%s}\n";
@@ -230,6 +239,10 @@ int FormatLine(char *szLineToFormat, char *pszFormattedString, ANALYZER_STATE *p
     return OK;
 }
 
+/*
+ * Takes one string as the first argument and a pointer to a string buffer as the second
+ * Replaces all occurrences of TAB with three spaces
+ * */
 int FormatWhiteSpace(char *pzFormattedString, char *pzFormattedWhiteSpaceString) {
     int i;
     for (i = 0; i < strlen(pzFormattedString); i++) {
@@ -244,9 +257,10 @@ int FormatWhiteSpace(char *pzFormattedString, char *pzFormattedWhiteSpaceString)
         }
         strcat(pzFormattedWhiteSpaceString, szCurrentChar);
     }
+    return OK;
 }
 
-int main(int iArgC, char *pszArgV[]) {
+int StartFormatting() {
 
     FILE *fpOriginalFile = fopen("testfile.c", "r");
     ANALYZER_STATE *structAnalyzerState = malloc(sizeof(ANALYZER_STATE));
