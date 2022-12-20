@@ -69,29 +69,30 @@ BOOKING *CreateBooking(char *szName, char *szRoom, unsigned int iDate, int iDays
 }
 
 /*
- *  First I want to convert the strings to lower case. Note that this will only work with ASCII characters and not UTF-8.
- *  Then I compare the two resulting strings
+ * Takes a LIST as the first parameter and the name to search for as the second
+ *
+ * First convert the strings to lower case. Note that this will only work with ASCII characters and not UTF-8.
+ * Then I compare the two resulting strings
  * */
 BOOKING *FindBookingByName(LIST *pList, char *szName) {
+    char szNameToCompareLower[256] = {0};
+    unsigned long int i , j ;
 
+    strcpy(szNameToCompareLower, szName);
     NODE *pCurrentNode = pList->pHead;
+
+    for (j = 0; j < strlen(szNameToCompareLower); j++) {
+        szNameToCompareLower[j] = tolower(szNameToCompareLower[j]);
+    }
 
     while (pCurrentNode != NULL) {
         BOOKING *pBooking = (BOOKING *) pCurrentNode->pData;
         char szNameLower[256];
-        char szNameToCompareLower[256];
 
         strcpy(szNameLower, pBooking->szName);
-        strcpy(szNameToCompareLower, szName);
-
-        unsigned long int i , j ;
         for (i = 0; i < strlen(szNameLower); i++) {
             szNameLower[i] = tolower(szNameLower[i]);
         }
-        for (j = 0; j < strlen(szNameToCompareLower); j++) {
-            szNameToCompareLower[j] = tolower(szNameToCompareLower[j]);
-        }
-
         if (strcmp(szNameLower, szNameToCompareLower) == 0) {
             return pBooking;
         }
@@ -281,11 +282,11 @@ int FindGuestByName(LIST *pList) {
     char szName[256];
     printf("Enter name: \n");
     fgets(szName, 255, stdin);
-    szName[strlen(szName)] = '\0';
+    szName[strlen(szName) - 1] = '\0';
     BOOKING *pBooking;
 
     if ((pBooking = FindBookingByName(pList, szName)) != NULL) {
-        printf("Found booking\n");
+        printf("Found booking!: \n");
         printf("Name: %s\n", pBooking->szName);
         printf("Room number: %s\n", pBooking->szRoomNumber);
         printf("Price: %f\n", pBooking->fPrice);
@@ -307,11 +308,11 @@ int SumBookingsMenu(LIST *pList) {
     struct tm structTm = {0};
 
     printf("Enter day (1-31): \n");
-    fgets(szDay, 55, stdin);
+    fgets(szDay, 56, stdin);
     printf("Enter month (1-12): \n");
-    fgets(szMonth, 55, stdin);
+    fgets(szMonth, 56, stdin);
     printf("Enter year: \n");
-    fgets(szYear, 55, stdin);
+    fgets(szYear, 56, stdin);
 
     structTm.tm_mday = atoi(szDay);
     structTm.tm_mon = atoi(szMonth) - 1;
@@ -319,7 +320,7 @@ int SumBookingsMenu(LIST *pList) {
 
 
     fTot = SummarizeBookingForOneDay(pList, mktime(&structTm));
-    printf("Total amount for that day: %f\n", fTot);
+    printf("Total amount for that day: %.2f\n", fTot);
 
     return 1;
 }
