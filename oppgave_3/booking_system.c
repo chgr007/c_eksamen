@@ -103,19 +103,33 @@ BOOKING *FindBookingByName(LIST *pList, char *szName) {
 
 int RemoveNodeFromList(LIST *pList, NODE *pNode) {
     // Check if element is first or last in the list before deleting
-    printf("RemoveNodeFromList: Removing\n");
-    if (pNode->pPrev == NULL) {
-        pList->pHead = pNode->pNext;
-    } else {
-        pNode->pPrev->pNext = pNode->pNext;
+    if (pNode == NULL) {
+        printf("ERROR: Node is NULL\n");
+        return ERROR;
     }
-    if (pNode->pNext == NULL) {
-        pList->pTail = pNode->pPrev;
+    printf("RemoveNodeFromList: Removing\n");
+    if (pList->pTail == pList->pHead) {
+        printf("RemoveNodeFromList: Removing only element\n");
+        // Only one node in the list
+        pList->pHead = NULL;
+        pList->pTail = NULL;
+    } else if (pNode->pPrev == NULL) {
+        printf("RemoveNodeFromList: Removing first element\n");
+        // This element is the first in the list
+        pList->pHead = pNode->pNext;
+    } else if (pNode->pNext == NULL) {
+        printf("RemoveNodeFromList: Removing last element\n");
+        pNode->pPrev->pNext = pNode->pNext;
     } else {
+        printf("RemoveNodeFromList: Removing element in the middle\n");
+        // This element is somewhere in the middle of the list
+        pNode->pPrev->pNext = pNode->pNext;
         pNode->pNext->pPrev = pNode->pPrev;
     }
+
     // Free the node
-    free((BOOKING *) pNode->pData);
+    printf("Freeing node\n");
+    free(pNode->pData);
     free(pNode);
     return OK;
 }
@@ -130,18 +144,15 @@ int RemoveOldBookings(LIST *pList) {
         time_t iSecondsWhenBookingEnds = pBooking->iDate + (pBooking->numberOfDays * 24 * 60 * 60);
 
         if (iSecondsWhenBookingEnds < time(NULL)) {
-            printf("Removing\n");
-            NODE *nodeToDelete = pCurrentNode->pNext;
+            NODE *nodeToDelete = pCurrentNode;
+
             if (pCurrentNode->pNext != NULL) {
                 pCurrentNode = nodeToDelete->pNext;
             } else {
                 pCurrentNode = NULL;
             }
-            printf("Removing node\n");
             RemoveNodeFromList(pList, nodeToDelete);
             continue;
-        } else {
-            printf("Node not older\n");
         }
         pCurrentNode = pCurrentNode->pNext;
     }
