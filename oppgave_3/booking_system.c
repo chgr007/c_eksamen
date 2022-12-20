@@ -136,7 +136,15 @@ int RemoveNodeFromList(LIST *pList, NODE *pNode) {
     return OK;
 }
 
-// Remove bookings from list that are older or equal than iDate + the seconds in the iDays (if equal, it expires in one second..)
+/*
+ * Takes LIST as parameter.
+ *
+ * removes bookings from list that
+ * are older or equal than iDate + the seconds in the iDays
+ * (if equal, it expires in one second..)
+ *
+ * Returns OK
+ * */
 int RemoveOldBookings(LIST *pList) {
     NODE *pCurrentNode = pList->pHead;
 
@@ -160,11 +168,20 @@ int RemoveOldBookings(LIST *pList) {
     }
     return OK;
 }
-
+/*
+ * Takes a LIST and an unsigned int (time_t) representation of a date as parameters.
+ *
+ * Checks all dates in the list against the given date.
+ *
+ * First convert iDate to struct tm, then find bookings for that day in the pList
+ * Then sum up the prices for all bookings for that day
+ * Then return the sum
+ *
+ * Returns 0.00 if error or there are no bookings for that day, or they have no price set.
+ * it otherwise returns the sum of all prices for that day.
+ */
 float SummarizeBookingForOneDay(LIST *pList, unsigned int iDate) {
-    // First convert iDate to struct tm, then find bookings for that day in the pList
-    // Then sum up the prices for all bookings for that day
-    // Then return the sum
+
     struct tm *pDate = localtime((time_t *) &iDate);
     float fSumOfBookings = 0.0;
 
@@ -185,8 +202,15 @@ float SummarizeBookingForOneDay(LIST *pList, unsigned int iDate) {
 
 
 
+/*
+ * Takes a LIST as parameter
+ *
+ * Checks if the list is empty, if the element is the only one, first or last one,
+ * Then it links any nodes next to it, accordingly and frees the node
+ *
+ * returns OK on success, and error on failure
+ * */
 int RemoveLastBooking(LIST *pList) {
-
     // There is no elements in the list, so just return 0
     if (pList->pHead == NULL) {
         return ERROR;
@@ -211,6 +235,13 @@ int RemoveLastBooking(LIST *pList) {
     return OK;
 }
 
+/*
+ * Takes a LIST as parameter
+ *
+ * Takes user input and formats it before creating a BOOKING to add to the list
+ *
+ * returns OK on success, and ERROR if not.
+ * */
 int AddBooking(LIST *pList) {
     int iRetVal = 0;
     char szName[256] = {0};
@@ -221,6 +252,8 @@ int AddBooking(LIST *pList) {
     float fPrice = 0.0;
 
     /* Time variables */
+    time_t iDateNow = time(NULL);
+    struct tm *currentTime = localtime((time_t *) &iDateNow);
     struct tm structTm = {0};
     char sDay[56];
     char sMonth[56];
@@ -247,20 +280,47 @@ int AddBooking(LIST *pList) {
     fgets(sDay, 56, stdin);
     printf("Enter month (1-12): \n");
     fgets(sMonth, 56, stdin);
-    printf("Enter year: \n");
+    printf("Enter year: (enter for this year)\n");
     fgets(sYear, 56, stdin);
     printf("Enter hour (0-23): \n");
     fgets(sHour, 56, stdin);
     printf("Enter minute (0-59): \n");
     fgets(sMinute, 56, stdin);
 
-    /* Convert the datetime to a tm struct */
-    structTm.tm_mday = atoi(sDay);
-    structTm.tm_mon = atoi(sMonth) - 1;
-    structTm.tm_year = atoi(sYear) - 1900;
-    structTm.tm_hour = atoi(sHour);
-    structTm.tm_min = atoi(sMinute);
+    /* Convert the datetime to a tm struct, also do some format checking */
+    if (atoi(sDay) < 1 || atoi(sDay) > 31) {
+        printf("Using today\n");
+        structTm.tm_mday = currentTime->tm_mday;
+    } else {
+        structTm.tm_mday = atoi(sDay);
+    }
+    if (atoi(sMonth) <= 0) {
+        printf("Using this month\n");
+        structTm.tm_mon = currentTime->tm_mon;
+    } else {
+        structTm.tm_mon = atoi(sMonth) - 1;
+    }
 
+    if (atoi(sYear) < currentTime->tm_year) {
+        printf("Using this year\n");
+        structTm.tm_year = currentTime->tm_year;
+    } else {
+        structTm.tm_year = atoi(sYear) - 1900;
+    }
+
+    if (atoi(sHour) < 0 || atoi(sHour) > 23) {
+        printf("Using this hour\n");
+        structTm.tm_hour = currentTime->tm_hour;
+    } else {
+        structTm.tm_hour = atoi(sHour);
+    }
+
+    if (atoi(sMinute) < 0 || atoi(sMinute) > 59) {
+        printf("Using this minute\n");
+        structTm.tm_min = currentTime->tm_min;
+    } else {
+        structTm.tm_min = atoi(sMinute);
+    }
 
     /* Create the booking */
     BOOKING *pBooking = CreateBooking(szName, szRoom, mktime(&structTm), iNumOfDays, fPrice);
@@ -278,6 +338,13 @@ int AddBooking(LIST *pList) {
     return iRetVal;
 }
 
+
+/*
+ * Takes a LIST as parameter
+ * Takes a name from stdin and checks if it's in the list
+ *
+ * returns OK if found, 0 if not.
+ * */
 int FindGuestByName(LIST *pList) {
     char szName[256];
     printf("Enter name: \n");
@@ -300,6 +367,17 @@ int FindGuestByName(LIST *pList) {
     }
 }
 
+
+/*
+ * Takes a LIST as parameter
+ *
+ * Takes user input from stdin, formats a date from it
+ * and calls SummarizeBookingForOneDay() with the date.
+ *
+ * Prints the result of SummarizeBookingForOneDay()
+ *
+ * Could be considered void, always returns OK.
+ * */
 int SumBookingsMenu(LIST *pList) {
     float fTot = 0;
     char szDay[56];
@@ -325,6 +403,13 @@ int SumBookingsMenu(LIST *pList) {
     return 1;
 }
 
+/*
+ * Takes a list as parameter.
+ *
+ * Prints all reservations it can find.
+ *
+ * Always returns OK
+ * */
 int PrintReservationList(LIST *pList) {
     NODE *pNode = pList->pHead;
     BOOKING *pBooking;
@@ -344,10 +429,14 @@ int PrintReservationList(LIST *pList) {
     return 1;
 }
 
+/*
+ * Takes a LIST as parameter.
+ *
+ * Handles the menu and calls functions upon user inputs.
+ * */
 int BookingMenu(LIST *pList) {
     int iChoice = 0;
     int iRunning = 1;
-
 
     do {
         // Clear the screen
@@ -385,6 +474,11 @@ int BookingMenu(LIST *pList) {
     return OK;
 }
 
+/*
+ * Takes input from stdin and returns it as an int.
+ *
+ * returns 0 if invalid input.
+ * */
 int GetChoice() {
     int iChoice = 0;
     char szInput[10];
@@ -395,6 +489,11 @@ int GetChoice() {
     return iChoice;
 }
 
+/*
+ * Prints main menu options
+ *
+ * Always returns OK
+ * */
 int PrintMainMenu() {
     printf("1. Add booking\n");
     printf("2. Undo booking\n");
@@ -402,5 +501,6 @@ int PrintMainMenu() {
     printf("4. Find guest by name\n");
     printf("5. Summarize total value for bookings in a day\n");
     printf("6. Print reservation list\n");
+    printf("7. Exit\n");
     return OK;
 }
