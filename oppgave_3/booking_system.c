@@ -70,7 +70,6 @@ BOOKING *CreateBooking(char *szName, char *szRoom, unsigned int iDate, int iDays
 
 /*
  *  First I want to convert the strings to lower case. Note that this will only work with ASCII characters and not UTF-8.
- *  As with everything in C, I've got to do most of the work here and iterate over every letter.
  *  Then I compare the two resulting strings
  * */
 BOOKING *FindBookingByName(LIST *pList, char *szName) {
@@ -85,11 +84,11 @@ BOOKING *FindBookingByName(LIST *pList, char *szName) {
         strcpy(szNameLower, pBooking->szName);
         strcpy(szNameToCompareLower, szName);
 
-        unsigned long int i = 0, j = 0;
-        for (; i < strlen(szNameLower); i++) {
+        unsigned long int i , j ;
+        for (i = 0; i < strlen(szNameLower); i++) {
             szNameLower[i] = tolower(szNameLower[i]);
         }
-        for (; j < strlen(szNameToCompareLower); j++) {
+        for (j = 0; j < strlen(szNameToCompareLower); j++) {
             szNameToCompareLower[j] = tolower(szNameToCompareLower[j]);
         }
 
@@ -101,27 +100,29 @@ BOOKING *FindBookingByName(LIST *pList, char *szName) {
     return NULL;
 }
 
+
+/*
+ * Takes a LIST as a parameter and the node to remove.
+ *
+ * Returns OK if the node was successfully removed, otherwise it returns ERROR.
+ * */
 int RemoveNodeFromList(LIST *pList, NODE *pNode) {
     // Check if element is first or last in the list before deleting
     if (pNode == NULL) {
         printf("ERROR: Node is NULL\n");
         return ERROR;
     }
-    printf("RemoveNodeFromList: Removing\n");
     if (pList->pTail == pList->pHead) {
-        printf("RemoveNodeFromList: Removing only element\n");
         // Only one node in the list
         pList->pHead = NULL;
         pList->pTail = NULL;
     } else if (pNode->pPrev == NULL) {
-        printf("RemoveNodeFromList: Removing first element\n");
         // This element is the first in the list
         pList->pHead = pNode->pNext;
     } else if (pNode->pNext == NULL) {
-        printf("RemoveNodeFromList: Removing last element\n");
+        // Element is last in the list
         pNode->pPrev->pNext = pNode->pNext;
     } else {
-        printf("RemoveNodeFromList: Removing element in the middle\n");
         // This element is somewhere in the middle of the list
         pNode->pPrev->pNext = pNode->pNext;
         pNode->pNext->pPrev = pNode->pPrev;
