@@ -3,11 +3,11 @@
 
 #pragma pack(1)
 typedef struct _BOOKING {
-    char *szName;
-    char *szRoomNumber;
-    unsigned int iDate;
+    char szName[256];
+    char szRoomNumber[128];
+    unsigned long int iDate;
     int numberOfDays;
-    int iSize;
+    long iSize;
     float fPrice;
 } BOOKING;
 #pragma pack()
@@ -20,9 +20,11 @@ int AddBookingToList(BOOKING *pBooking, LIST *pList);
 float SummarizeBookingForOneDay(LIST *pList, unsigned int iDate);
 int RemoveLastBooking(LIST *pList);
 int BookingMenu(LIST *pLIST);
-static int FreeBooking(BOOKING *pBooking);
+
 int AddBooking(LIST *pList);
 int FindGuestByName(LIST *pList);
+int SumBookingsMenu(LIST *pList);
+int PrintReservationList(LIST *pList);
 /* Prints the main menu */
 int PrintMainMenu();
 
