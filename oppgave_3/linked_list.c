@@ -4,8 +4,9 @@
 #include <time.h>
 #include "./include/linked_list.h"
 
-// Creates and allocates space for a new node + its content, then returns its pointer.
-// The node itself is made generic, so it uses the struct BYTE (unsigned char) type to hold the data. In newer versions of C we could've used a void pointer instead.
+/* Creates and allocates space for a new node + its content, then returns its pointer.
+ * The node itself is made generic, so it uses the struct BYTE (unsigned char) type to hold the data. In newer versions of C we could've used a void pointer instead.
+ */
 NODE *CreateNode (BYTE *pData, int iSize)
 {
     NODE *pThis = malloc (sizeof (NODE));

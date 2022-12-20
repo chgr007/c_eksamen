@@ -42,7 +42,9 @@ int main() {
     } else {
         printf("Could not find booking by name\n");
     }
-    SummerizeBookingForOneDay(pList, testBooking->iDate);
+    SummarizeBookingForOneDay(pList, testBooking->iDate);
+
+    BookingMenu();
     return 0;
 }
 
