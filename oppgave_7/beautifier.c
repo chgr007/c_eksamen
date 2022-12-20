@@ -125,9 +125,10 @@ int FindWhiteSpaces(char *pszLine, long iLoopStartOffset, ANALYZER_STATE *pState
     if (iWhiteSpaceOk == 0) {
         char *pcWhiteSpaceStart = matchWhiteSpace.rm_so + pszLine;
         char *pcWhiteSpaceEnd = iLoopStartOffset + pszLine - 1;
-        strncpy(pState->szWhiteSpace, pcWhiteSpaceStart, pcWhiteSpaceEnd - pcWhiteSpaceStart);
+        int iSize = pcWhiteSpaceEnd - pcWhiteSpaceStart;
+        strncpy(pState->szWhiteSpace, pcWhiteSpaceStart, iSize);
     } else {
-        strncpy(pState->szWhiteSpace, "", 2);
+        strncpy(pState->szWhiteSpace, "\0", 2);
     }
 
     return OK;
@@ -176,6 +177,7 @@ int HandleLoopMatch(char *szLineToFormat, long iLoopStartOffset, ANALYZER_STATE 
             char *pzWhileLoop = (char *) malloc(sizeof(char) * ulLineSize);
             bzero(pzWhileLoop, ulLineSize);
             if (FindIteration(pcStartOfIteration, pstruAnalyzerState->szIncrementors)) {
+                printf("White space:%s%lu\n", pstruAnalyzerState->szWhiteSpace, strlen(pstruAnalyzerState->szWhiteSpace));
                 sprintf(
                         pzWhileLoop, pzWhileLoopPattern,
                         pstruAnalyzerState->szWhiteSpace, pstruAnalyzerState->szLoopVariables,
