@@ -18,6 +18,7 @@ int main() {
         free(pCurrentNode);
         pCurrentNode = pNextNode;
     }
+    free(pList);
     return 0;
 }
 
