@@ -141,6 +141,7 @@ int CheckForBrackets(char *pszLine, ANALYZER_STATE *pState) {
     if (strstr(pszLine, "}")) {
         pState->iNumCloseBrackets++;
     }
+    return OK;
 }
 
 /*
@@ -211,7 +212,7 @@ int HandleLoopMatch(char *szLineToFormat, long iLoopStartOffset, ANALYZER_STATE 
  * */
 int FormatLine(char *szLineToFormat, char *pszFormattedString, ANALYZER_STATE *pstruAnalyzerState) {
     printf("Inside format line\n");
-    int i;
+
     regex_t regexLoop;
     regmatch_t match;
 
@@ -243,7 +244,6 @@ int FormatLine(char *szLineToFormat, char *pszFormattedString, ANALYZER_STATE *p
     } else if (iRegextVal == 1 && pstruAnalyzerState->iWorkingWithLoop == 1) {
         /* Working with the contents of a loop. */
         printf("Working with loop content\n");
-        char *pcClosingBracket;
 
         CheckForBrackets(szLineToFormat, pstruAnalyzerState);
 
@@ -263,7 +263,7 @@ int FormatLine(char *szLineToFormat, char *pszFormattedString, ANALYZER_STATE *p
             pstruAnalyzerState->iNumOpenBrackets = 0;
             pstruAnalyzerState->iNumCloseBrackets = 0;
             regfree(&regexLoop);
-            pcClosingBracket = NULL;
+
         } else {
             /* Not on the last line of the loop. Just concat the content */
             printf("Not on the last line of the loop\n");
@@ -278,7 +278,7 @@ int FormatLine(char *szLineToFormat, char *pszFormattedString, ANALYZER_STATE *p
  * Replaces all occurrences of TAB with three spaces
  * */
 int FormatWhiteSpace(char *pzFormattedString, char *pzFormattedWhiteSpaceString) {
-    int i;
+    size_t i;
     for (i = 0; i < strlen(pzFormattedString); i++) {
         char cCurrentChar = pzFormattedString[i];
         char szCurrentChar[3];
@@ -298,7 +298,7 @@ int FormatWhiteSpace(char *pzFormattedString, char *pzFormattedWhiteSpaceString)
 int ReadOneLineFromString(char **pszString, char *pszLine) {
     char currentChar[2];
 
-    int i;
+    size_t i;
     for (i = 0; i < strlen(*pszString); i++) {
         sprintf(currentChar, "%c", *pszString[i]);
         strcat(pszLine, currentChar);
@@ -311,6 +311,8 @@ int ReadOneLineFromString(char **pszString, char *pszLine) {
             return 0;
         }
     }
+
+    return 0;
 }
 
 int StartFormatting() {

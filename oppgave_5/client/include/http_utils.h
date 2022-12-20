@@ -26,7 +26,6 @@ struct URL {
  * instead of relying on the Content-Length header.
  * */
 int SavePayload(struct HTTP_RESPONSE *structHttpResponse, char *szFileName, int iNumBytes);
-struct URL* ParseURL(char *szUrl);
 int ReadLine(int sockFd,char *szLineBuffer);
 int SendMessage(int sockFd, struct URL *structUrl);
 int SplitHeaders(char *szLineBuffer, struct HTTP_RESPONSE *structHttpResponse, int sockFd);

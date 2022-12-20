@@ -62,7 +62,7 @@ void *PdfReader(PDF_BYTE_BUFFER *structPdfByteBuffer) {
     szFileContent = (char *) malloc(5000);
 
     // open a file called text_to_read.txt, return 1 if there's an error opening the file
-    FILE *fdFile = fopen(structPdfByteBuffer->szFileName, "r");
+    FILE *fdFile = fopen(structPdfByteBuffer->szFileName, "rb");
     if (fdFile == NULL) {
         printf("Error opening file\n");
         return (void *) ERROR;

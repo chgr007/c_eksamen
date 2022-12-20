@@ -22,37 +22,6 @@ int SendMessage(int sockFd, struct URL *structUrl) {
 }
 
 /*
- * Function to parse a URL to get the protocol + host + path.
- * */
-struct URL *ParseURL(char *szUrl) {
-    char *szToken, *szPartlyParsedUrl, szParams[256] = {0};
-    struct URL *structUrl = malloc(sizeof(struct URL));
-
-    szPartlyParsedUrl = (char *) malloc(sizeof(char) * 1024);
-    bzero(szPartlyParsedUrl, 1024);
-    /* Copy the URL so strtok can manipulate it safely */
-    strcpy(szPartlyParsedUrl, szUrl);
-
-    /* get HTTP or HTTPS */
-    szToken = strtok(szPartlyParsedUrl, "://");
-    strcpy(structUrl->szProtocol, szToken);
-
-    /* Gets the host */
-    szToken = strtok(NULL, "://");
-    strcpy(structUrl->szHost, szToken);
-
-    /* Gets the path */
-    while ((szToken = strtok(NULL, "/")) != NULL) {
-        strncat(szParams, "/", 2);
-        strncat(szParams, szToken, strlen(szToken) + 1);
-    }
-    strcpy(structUrl->szPath, szParams);
-
-    free(szPartlyParsedUrl);
-    return structUrl;
-}
-
-/*
  * Parses the response from the server, and extracts the header
  *
  * The response expected from the server should be in the pattern of
@@ -68,6 +37,8 @@ struct HTTP_RESPONSE *GetHeaders(int sockFd) {
     struct HTTP_RESPONSE *structHttpResponse;
     szLineBuffer = (char *) malloc(sizeof(char) * 256);
     structHttpResponse = malloc(sizeof(struct HTTP_RESPONSE));
+    memset(structHttpResponse, 0, sizeof(struct HTTP_RESPONSE));
+    memset(szLineBuffer, 0, 256);
 
     /* Get the first line / status line */
     ReadLine(sockFd, szLineBuffer);
@@ -178,11 +149,11 @@ int SplitHeaders(char *szLineBuffer, struct HTTP_RESPONSE *structHttpResponse, i
 
 /* Reads one line of the response and updates a buffer */
 int ReadLine(int sockFd, char *szLineBuffer) {
-    char *szReceivedMessageBuffer = (char *) malloc(sizeof(char));
-    bzero(szReceivedMessageBuffer, 1);
-
+    char *szReceivedMessageBuffer = (char *) malloc(sizeof(char) * 2);
+    ssize_t m = 0;
     while (TRUE) {
-        int m = recv(sockFd, szReceivedMessageBuffer, 1, MSG_DONTWAIT);
+        bzero(szReceivedMessageBuffer, 2);
+        m = recv(sockFd, szReceivedMessageBuffer, 1, MSG_DONTWAIT);
 
         /* Lines are terminated with \r\n, so we have a new line at \n. We don't want to keep the \r neither, so we return \0 to find the blank line. */
         if (m >= 0) {
