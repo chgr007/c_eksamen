@@ -8,7 +8,7 @@
 
 struct HTTP_RESPONSE {
     int iStatusCode;
-    int iContentLength;
+    long iContentLength;
     char szStatusMessage[56];
     char szVersion[56];
     char szContentType[56];
@@ -21,7 +21,11 @@ struct URL {
     char szPath[512];
     char szProtocol[8];
 };
-int SavePayload(struct HTTP_RESPONSE *structHttpResponse);
+/*
+ * I'm using the iNumBytes (actual bytes read from the payload) just to be sure,
+ * instead of relying on the Content-Length header.
+ * */
+int SavePayload(struct HTTP_RESPONSE *structHttpResponse, char *szFileName, int iNumBytes);
 struct URL* ParseURL(char *szUrl);
 int ReadLine(int sockFd,char *szLineBuffer);
 int SendMessage(int sockFd, struct URL *structUrl);

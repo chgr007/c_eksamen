@@ -4,7 +4,7 @@
 #include <netdb.h>
 #include <string.h>
 #include <stdlib.h>
-
+#include <unistd.h>
 /* Custom includes */
 #include "./include/client.h"
 #include "./include/http_utils.h"
@@ -33,7 +33,6 @@ int main(int iArgC, char *pszArgV[]) {
     strcpy(structURL->szProtocol, "HTTP/1.1");
 
     int iConnectionStatus = ConnectToSocket(structURL->szHost, sockFd);
-
     if (iConnectionStatus != OK) {
         printf("ERROR connecting to socket\n");
         return 0;
@@ -42,23 +41,39 @@ int main(int iArgC, char *pszArgV[]) {
     int iRequestStatus = SendMessage(sockFd, structURL);
     if (iRequestStatus != OK) {
         printf("ERROR sending message\n");
+        close(sockFd);
         return 0;
     }
-
     printf("Getting headers\n");
     struct HTTP_RESPONSE *structHttpResponse = GetHeaders(sockFd);
     if(structHttpResponse == NULL) {
         printf("ERROR getting headers\n");
+        free(structHttpResponse);
+        close(sockFd);
         return 0;
     }
     printf("Getting payload\n");
-    int iPayloadStatus = GetPayload(structHttpResponse, sockFd);
-    if (iPayloadStatus == OK) {
-        printf("%s\n", structHttpResponse->szPayload);
-        SavePayload(structHttpResponse);
-        return 1;
+    int iNumBytes = GetPayload(structHttpResponse, sockFd);
+    close(sockFd);
+    if (iNumBytes > 0) {
+        SavePayload(structHttpResponse, structURL->szPath, iNumBytes);
+        if (strcmp(structHttpResponse->szContentType, "text/html;") == 0
+        || strcmp(structHttpResponse->szContentType, "text/plain;") == 0) {
+            printf("Detected that the file is in textformat. Do you want to display it?\n");
+            printf("[1] Yes\n");
+            printf("[2] No\n");
+            char iChoice[3];
+            fgets(iChoice, 2, stdin);
+            if (strcmp(iChoice, "1") == 0) {
+                printf("Displaying file:\n\n\n");
+                puts(structHttpResponse->szPayload);
+            }
+        }
+        free(structHttpResponse->szPayload);
     }
     free(structURL);
+    free(structHttpResponse);
+    printf("\n\n\n\nHasta la vista, baby!\n");
     return 0;
 }
 
