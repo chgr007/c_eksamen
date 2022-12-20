@@ -19,10 +19,10 @@ BOOKING *FindBookingByName(LIST *pList, char *szName);
 int AddBookingToList(BOOKING *pBooking, LIST *pList);
 float SummarizeBookingForOneDay(LIST *pList, unsigned int iDate);
 int RemoveLastBooking(LIST *pList);
-int BookingMenu();
+int BookingMenu(LIST *pLIST);
 static int FreeBooking(BOOKING *pBooking);
-
-
+int AddBooking(LIST *pList);
+int FindGuestByName(LIST *pList);
 /* Prints the main menu */
 int PrintMainMenu();
 

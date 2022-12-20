@@ -44,7 +44,9 @@ int main() {
     }
     SummarizeBookingForOneDay(pList, testBooking->iDate);
 
-    BookingMenu();
+    BookingMenu(pList);
+    BOOKING *pAddedBooking = FindBookingByName(pList, "Chris");
+    printf("Added booking: %s\n", pAddedBooking->szName);
     return 0;
 }
 

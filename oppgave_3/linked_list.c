@@ -27,7 +27,6 @@ NODE *CreateNode (BYTE *pData, int iSize)
 }
 
 
-
 NODE *GetLastElement(LIST *pList)
 {
     NODE *pCurrentNode = pList->pHead;

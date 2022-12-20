@@ -189,38 +189,121 @@ int RemoveLastBooking(LIST *pList) {
     free(pTail);
     return OK;
 }
-int AddBooking() {
+int AddBooking(LIST *pList) {
+    int iRetVal = 0;
     char szName[256];
     char szRoom[56];
+    char sNumOfDays[56];
+    char sPrice[56];
     int iNumOfDays;
     float fPrice;
-    time_t structTime;
 
+    /* Time variables */
+    struct tm structTm;
+    char sDay[56];
+    char sMonth[56];
+    char sYear[56];
+    char sHour[56];
+    char sMinute[56];
+
+    /* Get the booking info */
     printf("Enter name: \n");
     fgets(szName, 255, stdin);
     szName[strlen(szName)] = '\0';
     printf("Enter room number: \n");
     fgets(szRoom, 55, stdin);
     szRoom[strlen(szRoom)] = '\0';
+    printf("Enter the price: \n");
+    fgets(sPrice, 55, stdin);
+    sPrice[strlen(sPrice)] = '\0';
+    fPrice = atof(sPrice);
+    printf("Enter number of days: \n");
+    fgets(sNumOfDays, 55, stdin);
+    iNumOfDays = atoi(sNumOfDays);
+    printf("Enter day (1-31): \n");
+    fgets(sDay, 55, stdin);
+    printf("Enter month (1-12): \n");
+    fgets(sMonth, 55, stdin);
+    printf("Enter year: \n");
+    fgets(sYear, 55, stdin);
+    printf("Enter hour (0-23): \n");
+    fgets(sHour, 55, stdin);
+    printf("Enter minute (0-59): \n");
+    fgets(sMinute, 55, stdin);
 
-//    timeInfo.tm_year = 2022 - 1900;
-//    timeInfo.tm_mon = 12 - 1;
-//    timeInfo.tm_mday = 8;
-//    timeInfo.tm_hour = 10 - 1;
-//    timeInfo.tm_min = 53 - 1;
-//
-//    unsigned int time = mktime(&timeInfo);
+    /* Convert the datetime to a tm struct */
+    structTm.tm_mday = atoi(sDay);
+    structTm.tm_mon = atoi(sMonth) - 1;
+    structTm.tm_year = atoi(sYear) - 1900;
+    structTm.tm_hour = atoi(sHour);
+    structTm.tm_min = atoi(sMinute);
+
+
+    /* Create the booking */
+    BOOKING *pBooking = (BOOKING *) malloc(sizeof(BOOKING));
+    memset(pBooking, 0, sizeof(BOOKING));
+    pBooking->szName = (char *) malloc(strlen(szName) + 1);
+    strcpy(pBooking->szName, szName);
+    pBooking->szRoomNumber = (char *) malloc(strlen(szRoom) + 1);
+    strcpy(pBooking->szRoomNumber, szRoom);
+    pBooking->numberOfDays = iNumOfDays;
+    pBooking->iDate = mktime(&structTm);
+    pBooking->fPrice = fPrice;
+
+    /* Add the booking to the list */
+    if (AddBookingToList(pBooking, pList)) {
+        printf("Booking added\n");
+        iRetVal = OK;
+    }
+
+
+    free(pBooking->szName);
+    free(pBooking->szRoomNumber);
+    free(pBooking);
+    return iRetVal;
 }
 
-int BookingMenu() {
+int FindGuestByName(LIST *pList) {
+    char szName[256];
+    printf("Enter name: \n");
+    fgets(szName, 255, stdin);
+    szName[strlen(szName)] = '\0';
+    BOOKING *pBooking;
+
+    if ((pBooking = FindBookingByName(pList, szName)) != NULL) {
+        printf("Found booking\n");
+        printf("Name: %s\n", pBooking->szName);
+        printf("Room number: %s\n", pBooking->szRoomNumber);
+        printf("Price: %f\n", pBooking->fPrice);
+        printf("Number of days: %d\n", pBooking->numberOfDays);
+        printf("Date: %s\n", ctime((time_t *) &pBooking->iDate));
+
+        return OK;
+    } else {
+        printf("No booking found\n");
+        return 0;
+    }
+}
+
+int BookingMenu(LIST *pList) {
     int iChoice = 0;
+    int iRunning = 1;
     PrintMainMenu();
     iChoice = GetChoice();
     printf("You chose %d\n", iChoice);
 
     switch (iChoice) {
         case 1:
-            AddBooking();
+            AddBooking(pList);
+            break;
+        case 2:
+            RemoveLastBooking(pList);
+            break;
+        case 3:
+            RemoveOldBookings(pList);
+            break;
+        case 4:
+            FindGuestByName(pList);
             break;
         default:
             printf("Invalid choice\n");
