@@ -1,6 +1,6 @@
 #include "include/beautifier.h"
 
-
+#include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -127,7 +127,7 @@ int FindWhiteSpaces(char *pszLine, long iLoopStartOffset, ANALYZER_STATE *pState
         char *pcWhiteSpaceEnd = iLoopStartOffset + pszLine - 1;
         strncpy(pState->szWhiteSpace, pcWhiteSpaceStart, pcWhiteSpaceEnd - pcWhiteSpaceStart);
     } else {
-        strncpy(pState->szWhiteSpace, "", 1);
+        strncpy(pState->szWhiteSpace, "", 2);
     }
 
     return OK;
@@ -161,7 +161,6 @@ int HandleLoopMatch(char *szLineToFormat, long iLoopStartOffset, ANALYZER_STATE 
     char *pcLoopStart = NULL;
     size_t ulLineSize = strlen(szLineToFormat);
 
-    pstruAnalyzerState->iWorkingWithLoop = 1;
 
     CheckForBrackets(szLineToFormat, pstruAnalyzerState);
     FindWhiteSpaces(szLineToFormat, iLoopStartOffset, pstruAnalyzerState);
@@ -209,29 +208,39 @@ int HandleLoopMatch(char *szLineToFormat, long iLoopStartOffset, ANALYZER_STATE 
  * The output string as second, and the state of the application as the third argument
  * */
 int FormatLine(char *szLineToFormat, char *pszFormattedString, ANALYZER_STATE *pstruAnalyzerState) {
+    printf("Inside format line\n");
     int i;
     regex_t regexLoop;
     regmatch_t match;
 
     int iRegextVal;
+    char *szLineBuffer = (char *) malloc(sizeof(char) * strlen(szLineToFormat) + 1);
+    strcpy(szLineBuffer, szLineToFormat);
+    printf("Line to format: %s", szLineToFormat);
     iRegextVal = regcomp(&regexLoop, "for[[:space:]]*\\(.+\\)", REG_EXTENDED);
-    iRegextVal = regexec(&regexLoop, szLineToFormat, 1, &match, 0);
+    printf("regcomp\n");
+    iRegextVal = regexec(&regexLoop, szLineBuffer, 1, &match, 0);
+    printf("regex done\n");
     if (iRegextVal == 0 && pstruAnalyzerState->iWorkingWithLoop == 0) {
+        pstruAnalyzerState->iWorkingWithLoop = 1;
+            printf("Found loop\n");
         if (HandleLoopMatch(szLineToFormat, match.rm_so, pstruAnalyzerState, pszFormattedString)) {
-            regfree(&regexLoop);
         } else {
             return 0;
         }
     } else if (iRegextVal == 1 && pstruAnalyzerState->iWorkingWithLoop == 0) {
         /* Not working with a loop, just concat the line */
+        printf("Not working with loop\n");
         strcat(pszFormattedString, szLineToFormat);
     } else if (iRegextVal == 0 && pstruAnalyzerState->iWorkingWithLoop == 1) {
         /* Got a nested loop. Just concat it, will handle it on next iteration  */
+        printf("Got a nested loop\n");
         pstruAnalyzerState->iFoundNestedLoop = 1;
         CheckForBrackets(szLineToFormat, pstruAnalyzerState);
         strcat(pszFormattedString, szLineToFormat);
     } else if (iRegextVal == 1 && pstruAnalyzerState->iWorkingWithLoop == 1) {
         /* Working with the contents of a loop. */
+        printf("Working with loop content\n");
         char *pcClosingBracket;
 
         CheckForBrackets(szLineToFormat, pstruAnalyzerState);
@@ -240,6 +249,7 @@ int FormatLine(char *szLineToFormat, char *pszFormattedString, ANALYZER_STATE *p
          * is on the last line of the loop
          */
         if (pstruAnalyzerState->iNumOpenBrackets == pstruAnalyzerState->iNumCloseBrackets) {
+            printf("Found matching number of brackets\n");
             char *szIteratorPattern = "%s   %s;\n%s}\n";
             char *szIterator = (char *) malloc(sizeof(char) * 512);
             printf("Loop iterator: %s\n", pstruAnalyzerState->szIncrementors);
@@ -250,9 +260,11 @@ int FormatLine(char *szLineToFormat, char *pszFormattedString, ANALYZER_STATE *p
             pstruAnalyzerState->iWorkingWithLoop = 0;
             pstruAnalyzerState->iNumOpenBrackets = 0;
             pstruAnalyzerState->iNumCloseBrackets = 0;
+            regfree(&regexLoop);
             pcClosingBracket = NULL;
         } else {
             /* Not on the last line of the loop. Just concat the content */
+            printf("Not on the last line of the loop\n");
             strcat(pszFormattedString, szLineToFormat);
         }
     }
@@ -267,7 +279,7 @@ int FormatWhiteSpace(char *pzFormattedString, char *pzFormattedWhiteSpaceString)
     int i;
     for (i = 0; i < strlen(pzFormattedString); i++) {
         char cCurrentChar = pzFormattedString[i];
-        char szCurrentChar[2];
+        char szCurrentChar[3];
         sprintf(szCurrentChar, "%c", cCurrentChar);
         // Replacing TAB with 3 spaces
         if (cCurrentChar == 9) {
@@ -279,6 +291,7 @@ int FormatWhiteSpace(char *pzFormattedString, char *pzFormattedWhiteSpaceString)
     }
     return OK;
 }
+
 // Copy a line \n from pszString into pszLine until reaching \0
 int ReadOneLineFromString(char **pszString, char *pszLine) {
     char currentChar[2];
@@ -297,8 +310,9 @@ int ReadOneLineFromString(char **pszString, char *pszLine) {
         }
     }
 }
-int StartFormatting() {
 
+int StartFormatting() {
+    long lBufferSize;
     FILE *fpOriginalFile = fopen("testfile.c", "r");
     ANALYZER_STATE *structAnalyzerState = malloc(sizeof(ANALYZER_STATE));
     memset(structAnalyzerState, 0, sizeof(ANALYZER_STATE));
@@ -307,13 +321,13 @@ int StartFormatting() {
     fseek(fpOriginalFile, 0, SEEK_END);
     long lFileSize = ftell(fpOriginalFile);
     fseek(fpOriginalFile, 0, SEEK_SET);
-
-    char *pszFormattedString = (char *) malloc(lFileSize + (lFileSize / 2));
+    lBufferSize = lFileSize + (lFileSize / 2);
+    char *pszFormattedString = (char *) malloc(lBufferSize);
     bzero(pszFormattedString, lFileSize);
-    char *pszFormattedWhiteSpaceString = (char *) malloc(lFileSize + (lFileSize / 2));
-    bzero(pszFormattedWhiteSpaceString, lFileSize + (lFileSize / 2));
+    char *pszFormattedWhiteSpaceString = (char *) malloc(lBufferSize);
+    bzero(pszFormattedWhiteSpaceString, lBufferSize);
     char *szLine = NULL;
-    size_t ulBufLen = 0;
+    size_t ulBufLen = 2048;
     ssize_t iReadBytes;
 
     while ((iReadBytes = getline(&szLine, &ulBufLen, fpOriginalFile)) != -1) {
@@ -322,30 +336,28 @@ int StartFormatting() {
     FormatWhiteSpace(pszFormattedString, pszFormattedWhiteSpaceString);
 
     if (structAnalyzerState->iFoundNestedLoop) {
+        FILE *tmpFile = tmpfile();
+        tmpFile = fopen("tmpfile.txt", "w");
+        if (tmpFile != NULL) {
+            memset(structAnalyzerState, 0, sizeof(ANALYZER_STATE));
+            bzero(pszFormattedString, lBufferSize);
+            printf("iFoundNestedLoop: %d\n", structAnalyzerState->iFoundNestedLoop);
+            ulBufLen = 0;
+            iReadBytes = 0;
+            fwrite(pszFormattedWhiteSpaceString, strlen(pszFormattedWhiteSpaceString), 1, tmpFile);
+            fclose(tmpFile);
+            tmpFile = fopen("tmpfile.txt", "r");
+            fseek(tmpFile, 0, SEEK_SET);
+            while ((iReadBytes = getline(&szLine, &ulBufLen, tmpFile)) != -1) {
+                FormatLine(szLine, pszFormattedString, structAnalyzerState);
+                printf("Reading next line\n");
+            }
+            printf("End of nested loop\n");
 
-//        char test[1024];
-//        char currentChar[2];
-//        int i;
-//        bzero(test, 1024);
-//        bzero(pszFormattedString, lFileSize + (lFileSize / 2));
-//        strcpy(pszFormattedString, pszFormattedWhiteSpaceString);
-//        bzero(pszFormattedWhiteSpaceString, lFileSize + (lFileSize / 2));
-//        char *p = pszFormattedString;
-//        for (i = 0; i < strlen(pszFormattedString); i++) {
-//            bzero(currentChar, 2);
-//            sprintf(currentChar, "%c", p[i]);
-//
-//            strcat(test, currentChar);
-//            if (p[i] == '\n') {
-//                p += i;
-//                //FormatLine(test, pszFormattedWhiteSpaceString, structAnalyzerState);
-//                printf("Line: %s\n", test);
-//                bzero(test, 1024);
-//                //return OK;
-//            } else if (p[i + 1] == '\0') {
-//                break;
-//            }
-//        }
+            fclose(tmpFile);
+            bzero(pszFormattedWhiteSpaceString, lBufferSize);
+            strcpy(pszFormattedWhiteSpaceString, pszFormattedString);
+        }
     }
 
     //printf("Formated string: %s", pszFormattedWhiteSpaceString);
