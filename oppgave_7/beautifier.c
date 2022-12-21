@@ -36,8 +36,10 @@ char *FindLoopCondition(char *pszConditionStart, char *pszLoopCondition) {
         // Copy the condition to pszLoopCondition
         strncpy(pszLoopCondition, pcCondStart, pcCondEnd - pcCondStart);
         pszLoopCondition[pcCondEnd - pcCondStart] = '\0';
+        regfree(&regexConditionEnd);
         return pcCondEnd;
     }
+    regfree(&regexConditionEnd);
     return NULL;
 }
 
@@ -130,7 +132,7 @@ int FindWhiteSpaces(char *pszLine, long iLoopStartOffset, ANALYZER_STATE *pState
     } else {
         strncpy(pState->szWhiteSpace, "\0", 2);
     }
-
+    regfree(&regexWhiteSpace);
     return OK;
 }
 
@@ -175,8 +177,10 @@ int HandleLoopMatch(char *szLineToFormat, long iLoopStartOffset, ANALYZER_STATE 
         if ((pcStartOfIteration = FindLoopCondition(pcStartOfCondition, pstruAnalyzerState->szConditions)) !=
             NULL) {
             char *pzWhileLoopPattern = "\n%s%s;\n%swhile (%s) {\n";
-            char *pzWhileLoop = (char *) malloc(sizeof(char) * ulLineSize);
-            bzero(pzWhileLoop, ulLineSize);
+            // Make a little extra space for the while loop
+            char *pzWhileLoop = (char *) malloc(sizeof(char) * ulLineSize * 2);
+            memset(pzWhileLoop, 0, ulLineSize * 2);
+
             if (FindIteration(pcStartOfIteration, pstruAnalyzerState->szIncrementors)) {
                 printf("White space:%s%lu\n", pstruAnalyzerState->szWhiteSpace, strlen(pstruAnalyzerState->szWhiteSpace));
                 sprintf(
@@ -184,6 +188,7 @@ int HandleLoopMatch(char *szLineToFormat, long iLoopStartOffset, ANALYZER_STATE 
                         pstruAnalyzerState->szWhiteSpace, pstruAnalyzerState->szLoopVariables,
                         pstruAnalyzerState->szWhiteSpace, pstruAnalyzerState->szConditions
                 );
+
                 printf(pzWhileLoopPattern, pstruAnalyzerState->szWhiteSpace, pstruAnalyzerState->szLoopVariables,
                        pstruAnalyzerState->szWhiteSpace, pstruAnalyzerState->szConditions);
                 strcat(szFormattedString, pzWhileLoop);
@@ -262,7 +267,7 @@ int FormatLine(char *szLineToFormat, char *pszFormattedString, ANALYZER_STATE *p
             pstruAnalyzerState->iWorkingWithLoop = 0;
             pstruAnalyzerState->iNumOpenBrackets = 0;
             pstruAnalyzerState->iNumCloseBrackets = 0;
-            regfree(&regexLoop);
+            free(szIterator);
 
         } else {
             /* Not on the last line of the loop. Just concat the content */
@@ -270,6 +275,8 @@ int FormatLine(char *szLineToFormat, char *pszFormattedString, ANALYZER_STATE *p
             strcat(pszFormattedString, szLineToFormat);
         }
     }
+    free(szLineBuffer);
+    regfree(&regexLoop);
     return OK;
 }
 
@@ -339,9 +346,16 @@ int StartFormatting() {
     }
     FormatWhiteSpace(pszFormattedString, pszFormattedWhiteSpaceString);
 
+    /*
+     * This one feels a bit hacky. If I had more time I'd rewrite the whole program
+     * to just read the file in one chunk and iterate over the string
+     *
+     * A tempfile lets me re-use the existing code without having to write an algorithm for
+     * splitting the string by lines, which could be more prone to errors than just using existing functionality
+     * in tmpfile().
+     * */
     if (structAnalyzerState->iFoundNestedLoop) {
         FILE *tmpFile = tmpfile();
-        tmpFile = fopen("tmpfile.txt", "w");
         if (tmpFile != NULL) {
             memset(structAnalyzerState, 0, sizeof(ANALYZER_STATE));
             bzero(pszFormattedString, lBufferSize);
@@ -349,19 +363,20 @@ int StartFormatting() {
             ulBufLen = 0;
             iReadBytes = 0;
             fwrite(pszFormattedWhiteSpaceString, strlen(pszFormattedWhiteSpaceString), 1, tmpFile);
-            fclose(tmpFile);
-            tmpFile = fopen("tmpfile.txt", "r");
+            // Rewind tmpFile
             fseek(tmpFile, 0, SEEK_SET);
+
             while ((iReadBytes = getline(&szLine, &ulBufLen, tmpFile)) != -1) {
                 FormatLine(szLine, pszFormattedString, structAnalyzerState);
                 printf("Reading next line\n");
             }
             printf("End of nested loop\n");
 
-            fclose(tmpFile);
             bzero(pszFormattedWhiteSpaceString, lBufferSize);
             strcpy(pszFormattedWhiteSpaceString, pszFormattedString);
         }
+        fclose(tmpFile);
+        tmpFile = NULL;
     }
 
     //printf("Formated string: %s", pszFormattedWhiteSpaceString);
