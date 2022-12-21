@@ -7,6 +7,7 @@ typedef struct _MYHTTP {
     int iHttpCode;
     int iContentLength;
     bool bIsSuccess;
+    // Oppskalert fra 16 til 32 byte
     char szServer[32];
     char szContentType[32];
     float fHttpVersion;

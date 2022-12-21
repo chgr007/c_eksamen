@@ -1,7 +1,7 @@
 #ifndef C_EKSAMEN_MAIN_H
 #define C_EKSAMEN_MAIN_H
 #define INPUT_FILE "./text_to_read.txt"
-#define OUTPUT_FILE "./text_to_write.out.txt"
+#define OUTPUT_FILE "./text_to_write.txt"
 
 
 /*

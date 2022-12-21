@@ -47,7 +47,7 @@ MYHTTP *ProcessHttpHeader(char *pszHttp) {
     }
     printf("Content-Type: %s\n", pHttp->szContentType);
 
-    // Feil 2: Returnerer pointer til starten av "Content-Length", men legger til tegnet '0', som i ASCII er tallet 48.
+    // Feil 3: Returnerer pointer til starten av "Content-Length", men legger til tegnet '0', som i ASCII er tallet 48.
     pszPtr = strstr(pszHttp, "Content-Length");
     if (pszPtr) {
         pszPtr += 14;

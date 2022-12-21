@@ -10,10 +10,10 @@ LDFLAGS = -Wall -Wextra -g -O0 -I$(INCLDIR)
 OBJDIR = obj
 DEBUGOBJSDIR = debugobjs
 
-_DEPS = main.h
+_DEPS = pdf_reader.h
 DEPS = $(patsubst %,$(INCLDIR)/%,$(_DEPS))
 
-_OBJS = main.o
+_OBJS = main.o pdf_reader.o
 OBJS = $(patsubst %,$(OBJDIR)/%,$(_OBJS))
 
 _DEBUGOBJS = main.o

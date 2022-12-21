@@ -21,6 +21,7 @@ int main(int iArgC, char *pszArgV[]) {
 
     //printf("%s\n", httpReply);
 
-    ProcessHttpHeader(httpReply);
+    MYHTTP *pHttp = ProcessHttpHeader(httpReply);
+    free(pHttp);
     return 0;
 }
