@@ -5,7 +5,7 @@
 
 #include "include/http_utils.h"
 
-/* Send a request to an open socket. */
+
 int SendMessage(int sockFd, struct URL *structUrl) {
     char szRequestPattern[] = "GET /%s HTTP/1.1\r\nHost: %s\r\n\r\n";
     char *szRequest = (char *) malloc(strlen(szRequestPattern) + strlen(structUrl->szPath) + strlen(structUrl->szHost));
@@ -21,17 +21,7 @@ int SendMessage(int sockFd, struct URL *structUrl) {
     return OK;
 }
 
-/*
- * Parses the response from the server, and extracts the header
- *
- * The response expected from the server should be in the pattern of
- * HTTP/1.1 200 OK
- * Header-Field1: Header-Value1
- * Header-Field2: Header-Value2
- * Content-Length: n
- *
- * n size of payload
- * */
+
 struct HTTP_RESPONSE *GetHeaders(int sockFd) {
     char *szLineBuffer, *szToken;
     struct HTTP_RESPONSE *structHttpResponse;
@@ -63,7 +53,7 @@ struct HTTP_RESPONSE *GetHeaders(int sockFd) {
     return structHttpResponse;
 }
 
-/* There's a bug which causes segfault on larger files. I can't find it */
+
 int GetPayload(struct HTTP_RESPONSE *structHttpResponse, int sockFd) {
     int iContentLength = structHttpResponse->iContentLength;
     char *szPayloadBuffer = (char *) malloc(sizeof(char) * 1500);
@@ -145,6 +135,7 @@ int SplitHeaders(char *szLineBuffer, struct HTTP_RESPONSE *structHttpResponse, i
         bzero(szLineBuffer, 256);
         ReadLine(sockFd, szLineBuffer);
     }
+    return OK;
 }
 
 /* Reads one line of the response and updates a buffer */
