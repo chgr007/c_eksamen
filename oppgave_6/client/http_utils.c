@@ -21,7 +21,6 @@ int SendMessage(int sockFd, struct URL *structUrl) {
     return OK;
 }
 
-
 struct HTTP_RESPONSE *GetHeaders(int sockFd) {
     char *szLineBuffer, *szToken;
     struct HTTP_RESPONSE *structHttpResponse;
@@ -52,7 +51,6 @@ struct HTTP_RESPONSE *GetHeaders(int sockFd) {
     szLineBuffer = NULL;
     return structHttpResponse;
 }
-
 
 int GetPayload(struct HTTP_RESPONSE *structHttpResponse, int sockFd) {
     int iContentLength = structHttpResponse->iContentLength;
@@ -112,7 +110,6 @@ int SavePayload(struct HTTP_RESPONSE *structHttpResponse, char *szFilename, int 
     return OK;
 }
 
-/* Gets the header fields value and sets the HTTP_RESPONSE pointers fields accordingly */
 int SplitHeaders(char *szLineBuffer, struct HTTP_RESPONSE *structHttpResponse, int sockFd) {
     char *szToken;
     bzero(szLineBuffer, 256);
@@ -138,7 +135,6 @@ int SplitHeaders(char *szLineBuffer, struct HTTP_RESPONSE *structHttpResponse, i
     return OK;
 }
 
-/* Reads one line of the response and updates a buffer */
 int ReadLine(int sockFd, char *szLineBuffer) {
     char *szReceivedMessageBuffer = (char *) malloc(sizeof(char) * 2);
     ssize_t m = 0;

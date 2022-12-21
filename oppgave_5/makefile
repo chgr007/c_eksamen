@@ -26,7 +26,7 @@ $(OBJDIR)/%.o: %.c $(DEPS)
 $(DEBUGOBJSDIR)/%.o: %.c $(DEPS)
 	$(CC) -c -o $@ $< $(LDFLAGS) -DDEBUG
 
-oppgave4: $(OBJS)
+oppgave5: $(OBJS)
 	gcc -o $@ $^ $(CFLAGS) $(LINKEXTRA)
 
 debug: $(DEBUGOBJS)

@@ -262,10 +262,24 @@ int FormatWhiteSpace(char *pzFormattedString, char *pzFormattedWhiteSpaceString)
 }
 
 
-int StartFormatting() {
+int StartFormatting(char *szInputFile) {
     long lBufferSize;
     int iRetVal = OK;
-    FILE *fpOriginalFile = fopen("testfile.c", "r");
+    char szOutputFile[256] = {0};
+    char szInputFileBuff[256] = {0};
+    strcpy(szInputFileBuff, szInputFile);
+    // Get filename without extention
+    char *szFileName = strtok(szInputFileBuff, ".");
+    // Get file extension
+    char *szFileExt = strtok(NULL, ".");
+    // Make output file name
+    sprintf(szOutputFile, "%s_beautified.%s", szFileName, szFileExt);
+
+    FILE *fpOriginalFile = fopen(szInputFile, "r");
+    if (fpOriginalFile == NULL) {
+        printf("Error opening file\n");
+        return 0;
+    }
     ANALYZER_STATE *structAnalyzerState = malloc(sizeof(ANALYZER_STATE));
     memset(structAnalyzerState, 0, sizeof(ANALYZER_STATE));
 
@@ -334,7 +348,7 @@ int StartFormatting() {
 
 
     fclose(fpOriginalFile);
-    FILE *fpBeautifiedFile = fopen("testfile_beautified.c", "w");
+    FILE *fpBeautifiedFile = fopen(szOutputFile, "w");
     fwrite(pszFormattedWhiteSpaceString, 1, strlen(pszFormattedWhiteSpaceString), fpBeautifiedFile);
     free(pszFormattedString);
     fclose(fpBeautifiedFile);

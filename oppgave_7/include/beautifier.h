@@ -51,7 +51,7 @@ char *FindLoopCondition(char *pszConditionStart, char *pszLoopCondition);
 /*
  * Initializes the program
  * */
-int StartFormatting();
+int StartFormatting(char *psFileName);
 
 /*
  * Takes the start line with the discovered loop as the first parameter,
