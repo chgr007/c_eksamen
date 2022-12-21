@@ -64,9 +64,10 @@ void *PdfAnalyzer(PDF_BYTE_BUFFER *pdfByteBuffer) {
         sem_wait(&pdfByteBuffer->semWaitForBuffer);
         sem_post(&pdfByteBuffer->semWaitForProcessing);
         for (int i = 0; i < pdfByteBuffer->iNumBytes; i++) {
+            // Get the byte value for use as index
             BYTE byNumRepresentation = (BYTE) pdfByteBuffer->byBuffer[i];
             pdfByteBuffer->iAnalyzedBytes[byNumRepresentation]++;
         }
     }
-    return NULL;
+    return (void *) OK;
 }
