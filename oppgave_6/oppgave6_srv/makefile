@@ -16,7 +16,7 @@ DEPS = $(patsubst %,$(INCLDIR)/%,$(_DEPS))
 _OBJS = server.o http_utils.o
 OBJS = $(patsubst %,$(OBJDIR)/%,$(_OBJS))
 
-_DEBUGOBJS = oppgave6_srv.o
+_DEBUGOBJS = $(_OBJS)
 DEBUGOBJS = $(patsubst %,$(DEBUGOBJSDIR)/%,$(_DEBUGOBJS))
 
 
@@ -26,7 +26,7 @@ $(OBJDIR)/%.o: %.c $(DEPS)
 $(DEBUGOBJSDIR)/%.o: %.c $(DEPS)
 	$(CC) -c -o $@ $< $(LDFLAGS) -DDEBUG
 
-server: $(OBJS)
+oppgave6_srv: $(OBJS)
 	gcc -o $@ $^ $(CFLAGS) $(LINKEXTRA)
 
 debug: $(DEBUGOBJS)

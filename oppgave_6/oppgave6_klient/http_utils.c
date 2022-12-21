@@ -59,11 +59,11 @@ int GetPayload(struct HTTP_RESPONSE *structHttpResponse, int sockFd) {
         printf("ERROR: Unexpected length on payload: %d\n", iContentLength);
         return ERROR;
     }
-    structHttpResponse->szPayload = (char *) malloc(sizeof(char) * iContentLength);
-    memset(structHttpResponse->szPayload, 0, iContentLength);
+    structHttpResponse->szPayload = (char *) malloc(sizeof(char) * iContentLength + 2);
+    memset(structHttpResponse->szPayload, 0, iContentLength + 2);
     // While there is data to read, read it
     printf("Content-length: %d\n", iContentLength);
-    long mBytes = 0, totBytes = 0;
+    size_t mBytes = 0, totBytes = 0;
     do {
         memset(szPayloadBuffer, 0, 1500);
         mBytes = recv(sockFd, szPayloadBuffer, 1500, MSG_BATCH);

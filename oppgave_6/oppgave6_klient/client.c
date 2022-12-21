@@ -68,11 +68,11 @@ int main(int iArgC, char *pszArgV[]) {
             printf("Detected that the file is in textformat. Do you want to display it?\n");
             printf("[1] Yes\n");
             printf("[2] No\n");
-            char iChoice[3];
+            char iChoice[3] = {0};
             fgets(iChoice, 2, stdin);
             if (strcmp(iChoice, "1") == 0) {
                 printf("Displaying file:\n\n\n");
-                puts(structHttpResponse->szPayload);
+                printf("%s\n",structHttpResponse->szPayload);
             }
         }
         free(structHttpResponse->szPayload);
