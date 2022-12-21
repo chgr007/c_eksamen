@@ -302,12 +302,13 @@ int StartFormatting() {
      * splitting the string by lines, which could be more prone to errors than just using the existing functionality
      * in tmpfile().
      * */
-    if (structAnalyzerState->iFoundNestedLoop && iRetVal == OK) {
+    while (structAnalyzerState->iFoundNestedLoop && iRetVal == OK) {
+        printf("iFoundNestedLoop: %d\n", structAnalyzerState->iFoundNestedLoop);
+        memset(structAnalyzerState, 0, sizeof(ANALYZER_STATE));
+
         FILE *tmpFile = tmpfile();
         if (tmpFile != NULL) {
-            memset(structAnalyzerState, 0, sizeof(ANALYZER_STATE));
             bzero(pszFormattedString, lBufferSize);
-            printf("iFoundNestedLoop: %d\n", structAnalyzerState->iFoundNestedLoop);
             ulBufLen = 0;
             iReadBytes = 0;
             fwrite(pszFormattedWhiteSpaceString, strlen(pszFormattedWhiteSpaceString), 1, tmpFile);
