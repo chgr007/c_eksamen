@@ -4,7 +4,6 @@ INCLDIR = ./include
 CC = gcc
 CFLAGS = -O2
 CFLAGS += -I$(INCLDIR)
-LINKEXTRA = -lpthread
 LDFLAGS = -Wall -Wextra -g -O0 -I$(INCLDIR)
 #LDFLAGS += -ansi -pedantic
 OBJDIR = obj
@@ -27,10 +26,10 @@ $(DEBUGOBJSDIR)/%.o: %.c $(DEPS)
 	$(CC) -c -o $@ $< $(LDFLAGS) -DDEBUG
 
 oppgave6_srv: $(OBJS)
-	gcc -o $@ $^ $(CFLAGS) $(LINKEXTRA)
+	gcc -o $@ $^ $(CFLAGS)
 
 debug: $(DEBUGOBJS)
-	$(CC) -o $@ $^ $(LDFLAGS) $(LINKEXTRA)
+	$(CC) -o $@ $^ $(LDFLAGS)
 
 
 .PHONY: clean
