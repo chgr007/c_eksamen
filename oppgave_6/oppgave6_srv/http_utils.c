@@ -5,7 +5,7 @@
 #include <unistd.h>
 #include "include/http_utils.h"
 
-/* Setting content type according to file format */
+
 static int SetResponseContentType(HTTP_REQUEST *structRequest, HTTP_RESPONSE *structResponse) {
     char szTextPlain[] = "Content-Type: text/plain; charset=UTF-8\r\n";
 
@@ -54,14 +54,6 @@ static int ParseRequestHeaders(int sockFd, HTTP_REQUEST *structRequest) {
     return OK;
 }
 
-/*
- * Splits the string on the "." delimiter, and checks if the
- * file extension matches any known ones.
- * Returns an enum in the range of 0 - 6, where 6 is UNKNOWN.
- *
- * On error, it returns -1.
- */
-
 static int GetFileExtension(char *szFileName) {
     char szTmp[256];
     printf("FILENAME %s\n", szFileName);
@@ -103,9 +95,6 @@ static int GetFileExtension(char *szFileName) {
     }
 }
 
-/* The function takes in a request line and returns the file/path to the szFileName pointer
- * The requested path / file resides in the middle of the request line with space as a delimiter. */
-
 static int ParseRequestLine(char *szRequestLine, HTTP_REQUEST *structReq) {
     char *szToken;
     szToken = strtok(szRequestLine, " ");
@@ -134,12 +123,10 @@ static int ParseRequestLine(char *szRequestLine, HTTP_REQUEST *structReq) {
     return OK;
 }
 
-/*
- * Set the header fields
- * in the HTTP_RESPONSE struct
- */
 static int SetResponseHeaders(HTTP_REQUEST *structRequest, HTTP_RESPONSE *structResponse, long iFileSize) {
-    /* Weird bug in sprintf when using \r\n */
+    /* Weird bug occurs when using \r\n in sprintf
+     * Work around..
+     * */
     char szContentLength[256];
     bzero(szContentLength, 256);
     sprintf(szContentLength, "Content-Length: %ld", iFileSize);
@@ -152,6 +139,8 @@ static int SetResponseHeaders(HTTP_REQUEST *structRequest, HTTP_RESPONSE *struct
     SetResponseContentType(structRequest, structResponse);
 
     printf("Content length: %s\n", structResponse->szContentLength);
+
+    return 1;
 }
 
 static int SendResponseHeaders(int sockFd, HTTP_RESPONSE *structResponse) {
@@ -245,12 +234,12 @@ int HandleConnection(int sockClientFd) {
     free(structReq);
 }
 
-
 static int WriteFileToSocket(FILE *fdFile, int sockClientFd, long iFileSize) {
-    /* Size of an Ethernet frame
-       It might not be of any use to do it this way unless I write an algorithm to send a chunk of the file with the headers
-       f it buffers 1500B on the network layer then this will be out of sync
-    */
+    /*
+     * Size of an Ethernet frame
+     * It might not be of any use to do it this way unless I write an algorithm to send a chunk of the file with the headers
+     * if it buffers 1500B on the network layer then this will be out of sync
+     */
     char *byFileBuffer = malloc(sizeof (char) * iFileSize);
     memset(byFileBuffer, 0, iFileSize);
     int iBytesRead;
@@ -282,8 +271,6 @@ static int WriteFileToSocket(FILE *fdFile, int sockClientFd, long iFileSize) {
     return OK;
 }
 
-
-/* Gets the header fields value and sets the HTTP_RESPONSE pointers fields accordingly */
 static int SplitHeaders(HTTP_REQUEST *structHttpRequest, int sockFd) {
     char *szToken;
     char *szLineBuffer = (char *) malloc(1024 * sizeof(char));
@@ -308,7 +295,6 @@ static int SplitHeaders(HTTP_REQUEST *structHttpRequest, int sockFd) {
     return OK;
 }
 
-/* Reads one line of the response and updates a buffer */
 static int ReadLine(int sockFd, char *szLineBuffer) {
     char *szReceivedMessageBuffer = (char *) malloc(sizeof(char));
     bzero(szReceivedMessageBuffer, 1);
@@ -326,4 +312,5 @@ static int ReadLine(int sockFd, char *szLineBuffer) {
         }
     }
     free(szReceivedMessageBuffer);
+    return OK;
 }

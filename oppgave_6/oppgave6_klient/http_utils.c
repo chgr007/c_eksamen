@@ -5,7 +5,7 @@
 
 #include "include/http_utils.h"
 
-/* Send a request to an open socket. */
+
 int SendMessage(int sockFd, struct URL *structUrl) {
     char szRequestPattern[] = "GET /%s HTTP/1.1\r\nHost: %s\r\n\r\n";
     char *szRequest = (char *) malloc(strlen(szRequestPattern) + strlen(structUrl->szPath) + strlen(structUrl->szHost));
@@ -21,17 +21,6 @@ int SendMessage(int sockFd, struct URL *structUrl) {
     return OK;
 }
 
-/*
- * Parses the response from the server, and extracts the header
- *
- * The response expected from the server should be in the pattern of
- * HTTP/1.1 200 OK
- * Header-Field1: Header-Value1
- * Header-Field2: Header-Value2
- * Content-Length: n
- *
- * n size of payload
- * */
 struct HTTP_RESPONSE *GetHeaders(int sockFd) {
     char *szLineBuffer, *szToken;
     struct HTTP_RESPONSE *structHttpResponse;
@@ -63,7 +52,6 @@ struct HTTP_RESPONSE *GetHeaders(int sockFd) {
     return structHttpResponse;
 }
 
-/* There's a bug which causes segfault on larger files. I can't find it */
 int GetPayload(struct HTTP_RESPONSE *structHttpResponse, int sockFd) {
     int iContentLength = structHttpResponse->iContentLength;
     char *szPayloadBuffer = (char *) malloc(sizeof(char) * 1500);
@@ -71,11 +59,11 @@ int GetPayload(struct HTTP_RESPONSE *structHttpResponse, int sockFd) {
         printf("ERROR: Unexpected length on payload: %d\n", iContentLength);
         return ERROR;
     }
-    structHttpResponse->szPayload = (char *) malloc(sizeof(char) * iContentLength);
-    memset(structHttpResponse->szPayload, 0, iContentLength);
+    structHttpResponse->szPayload = (char *) malloc(sizeof(char) * iContentLength + 2);
+    memset(structHttpResponse->szPayload, 0, iContentLength + 2);
     // While there is data to read, read it
     printf("Content-length: %d\n", iContentLength);
-    long mBytes = 0, totBytes = 0;
+    size_t mBytes = 0, totBytes = 0;
     do {
         memset(szPayloadBuffer, 0, 1500);
         mBytes = recv(sockFd, szPayloadBuffer, 1500, MSG_BATCH);
@@ -122,7 +110,6 @@ int SavePayload(struct HTTP_RESPONSE *structHttpResponse, char *szFilename, int 
     return OK;
 }
 
-/* Gets the header fields value and sets the HTTP_RESPONSE pointers fields accordingly */
 int SplitHeaders(char *szLineBuffer, struct HTTP_RESPONSE *structHttpResponse, int sockFd) {
     char *szToken;
     bzero(szLineBuffer, 256);
@@ -145,9 +132,9 @@ int SplitHeaders(char *szLineBuffer, struct HTTP_RESPONSE *structHttpResponse, i
         bzero(szLineBuffer, 256);
         ReadLine(sockFd, szLineBuffer);
     }
+    return OK;
 }
 
-/* Reads one line of the response and updates a buffer */
 int ReadLine(int sockFd, char *szLineBuffer) {
     char *szReceivedMessageBuffer = (char *) malloc(sizeof(char) * 2);
     ssize_t m = 0;

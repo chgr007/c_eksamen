@@ -10,13 +10,13 @@ LDFLAGS = -Wall -Wextra -g -O0 -I$(INCLDIR)
 OBJDIR = obj
 DEBUGOBJSDIR = debugobjs
 
-_DEPS = server.h http_utils.h
+_DEPS = pdf_reader.h
 DEPS = $(patsubst %,$(INCLDIR)/%,$(_DEPS))
 
-_OBJS = server.o http_utils.o
+_OBJS = main.o pdf_reader.o
 OBJS = $(patsubst %,$(OBJDIR)/%,$(_OBJS))
 
-_DEBUGOBJS = server.o
+_DEBUGOBJS = main.o
 DEBUGOBJS = $(patsubst %,$(DEBUGOBJSDIR)/%,$(_DEBUGOBJS))
 
 
@@ -26,7 +26,7 @@ $(OBJDIR)/%.o: %.c $(DEPS)
 $(DEBUGOBJSDIR)/%.o: %.c $(DEPS)
 	$(CC) -c -o $@ $< $(LDFLAGS) -DDEBUG
 
-server: $(OBJS)
+oppgave5: $(OBJS)
 	gcc -o $@ $^ $(CFLAGS) $(LINKEXTRA)
 
 debug: $(DEBUGOBJS)

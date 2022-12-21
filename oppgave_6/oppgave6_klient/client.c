@@ -63,18 +63,18 @@ int main(int iArgC, char *pszArgV[]) {
     close(sockFd);
     if (iNumBytes > 0) {
         SavePayload(structHttpResponse, structURL->szPath, iNumBytes);
-//        if (strcmp(structHttpResponse->szContentType, "text/html;") == 0
-//        || strcmp(structHttpResponse->szContentType, "text/plain;") == 0) {
-//            printf("Detected that the file is in textformat. Do you want to display it?\n");
-//            printf("[1] Yes\n");
-//            printf("[2] No\n");
-//            char iChoice[3];
-//            fgets(iChoice, 2, stdin);
-//            if (strcmp(iChoice, "1") == 0) {
-//                printf("Displaying file:\n\n\n");
-//                puts(structHttpResponse->szPayload);
-//            }
-//        }
+        if (strcmp(structHttpResponse->szContentType, "text/html;") == 0
+        || strcmp(structHttpResponse->szContentType, "text/plain;") == 0) {
+            printf("Detected that the file is in textformat. Do you want to display it?\n");
+            printf("[1] Yes\n");
+            printf("[2] No\n");
+            char iChoice[3] = {0};
+            fgets(iChoice, 2, stdin);
+            if (strcmp(iChoice, "1") == 0) {
+                printf("Displaying file:\n\n\n");
+                printf("%s\n",structHttpResponse->szPayload);
+            }
+        }
         free(structHttpResponse->szPayload);
     }
     free(structURL);

@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <netdb.h>
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -47,6 +46,7 @@ int main(int iArgC, char *pszArgV[]) {
     printf("Exiting...\n");
     return 0;
 }
+
 
 int BindAndListen() {
     struct sockaddr_in saAddr;
